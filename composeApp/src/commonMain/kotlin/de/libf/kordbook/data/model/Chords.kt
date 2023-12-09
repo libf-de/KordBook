@@ -1,27 +1,47 @@
 package de.libf.kordbook.data.model
 
-import io.realm.kotlin.types.RealmObject
-import io.realm.kotlin.types.annotations.FullText
-import io.realm.kotlin.types.annotations.PrimaryKey
-import org.mongodb.kbson.ObjectId
-
 data class Chords(
-    @PrimaryKey
-    var _id: ObjectId = ObjectId(),
-    val id: String,
+    var url: String,
+    var id: String,
+    var songName: String,
+    var songId: String,
+    var artist: String,
+    var artistId: String,
+    var versions: List<Chords> = emptyList(),
+    var related: List<Chords> = emptyList(),
+    var origin: String,
+    var rating: Double? = null,
+    var votes: Double? = null,
+    var version: String? = null,
+    var tonality: String? = null,
+    var capo: String? = null,
+    var chords: String? = null,
+) {
+    companion object {
+        val EMPTY = Chords(
+            url = "",
+            id = "",
+            songName = "",
+            songId = "",
+            artist = "",
+            artistId = "",
+            versions = emptyList(),
+            related = emptyList(),
+            origin = "",
+            rating = null,
+            votes = null,
+            version = null,
+            tonality = null,
+            capo = null,
+            chords = null,
+        )
+    }
 
-    @FullText
-    val title: String,
-
-    @FullText
-    val artist: String,
-    val related: List<Chords>,
-    val url: String,
-    val origin: ChordOrigin,
-    val rating: Double? = null,
-    val votes: Double? = null,
-    val version: String? = null,
-    val tonality: String? = null,
-    val capo: String? = null,
-    val chords: String? = null,
-) : RealmObject
+    fun ratingVotesRatio(): Double? {
+        return (this.votes?.let { it1 ->
+            this.rating?.times(
+                it1
+            )
+        })
+    }
+}

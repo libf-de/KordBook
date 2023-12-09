@@ -7,6 +7,9 @@ plugins {
     alias(libs.plugins.jetbrainsCompose)
     alias(libs.plugins.realm)
     id(libs.plugins.mokoResources.get().pluginId)
+
+    alias(libs.plugins.sqldelight)
+
     alias(libs.plugins.kotlinx.serialization)
 }
 
@@ -42,7 +45,11 @@ kotlin {
     
     sourceSets {
         //val desktopMain by getting
-        
+
+        /////Sqldelight iOS database driver
+        //            implementation(libs.sqldelight.driver.native)
+
+
         androidMain.dependencies {
             implementation(libs.compose.ui)
             implementation(libs.compose.ui.tooling.preview)
@@ -50,6 +57,8 @@ kotlin {
             compileOnly(libs.realm.base)
             compileOnly(libs.realm.sync)
             implementation(libs.koin.android)
+            // Android Database Driver
+            implementation(libs.sqldelight.driver.android)
         }
 
         val desktopMain by getting {
@@ -57,6 +66,9 @@ kotlin {
 
             dependencies {
                 implementation(compose.desktop.currentOs)
+
+                // Sqldeight Desktop Driver
+                implementation(libs.sqldelight.driver.sqlite)
             }
         }
 
@@ -66,8 +78,15 @@ kotlin {
             implementation(compose.material3)
             @OptIn(ExperimentalComposeLibrary::class)
             implementation(compose.components.resources)
+
+
             implementation(libs.realm.base)
             implementation(libs.realm.sync)
+
+            // Sqldelight coroutines extension
+            implementation(libs.sqldelight.coroutines)
+
+
             implementation(libs.kotlinx.coroutines)
             api(libs.koin)
             implementation(libs.koin.compose)
@@ -88,6 +107,16 @@ kotlin {
 
             // Logging
             api(libs.logging)
+
+            // Datetime
+            api(libs.kotlinx.datetime)
+
+            // Ktor
+            implementation(libs.ktor.client)
+            implementation(libs.ktor.client.cio)
+            implementation(libs.ktor.client.serialization.json)
+            implementation(libs.ktor.client.content.negotiation)
+
         }
     }
 }
@@ -147,4 +176,12 @@ compose.desktop {
 multiplatformResources {
     multiplatformResourcesPackage = "de.libf.kordbook.res"
     disableStaticFrameworkWarning = true
+}
+
+sqldelight {
+    databases {
+        create("ChordsDatabase") {
+            packageName = "de.libf.kordbook.data"
+        }
+    }
 }

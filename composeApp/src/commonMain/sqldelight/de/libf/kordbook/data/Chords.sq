@@ -1,0 +1,49 @@
+import java.lang.Integer;
+import kotlin.String;
+import kotlin.collections.List;
+
+CREATE TABLE DbChords (
+    url TEXT NOT NULL PRIMARY KEY,
+    songName TEXT NOT NULL,
+    songId TEXT NOT NULL,
+    artist TEXT NOT NULL,
+    artistId TEXT NOT NULL,
+    versions TEXT AS List<String> NOT NULL,
+    related TEXT AS List<String> NOT NULL,
+    id TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    rating REAL,
+    votes REAL,
+    version TEXT,
+    tonality TEXT,
+    capo TEXT,
+    chords TEXT
+);
+
+search:
+SELECT * FROM DbChords WHERE instr(songName, :text) > 0 OR instr(artist, :text) > 0;
+
+selectAll:
+SELECT * FROM DbChords;
+
+selectByUrl:
+SELECT * FROM DbChords WHERE url = ?;
+
+haveUrl:
+SELECT EXISTS(SELECT 1 FROM DbChords WHERE url = ? AND chords IS NOT NULL);
+
+selectVersionsById:
+SELECT id, songName, songId, artist, artistId, url, rating, votes, version FROM DbChords WHERE url = ?;
+
+insertChords:
+INSERT OR IGNORE INTO DbChords (url, songName, songId, artist, artistId, versions, related, id, origin, rating, votes, version, tonality, capo, chords)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateChords:
+UPDATE DbChords SET songName = ?, artist = ?, versions = ?, related = ?, id = ?, origin = ?, rating = ?, votes = ?, version = ?, tonality = ?, capo = ?, chords = ? WHERE url = ?;
+
+deleteChords:
+DELETE FROM DbChords WHERE url = ?;
+
+deleteAll:
+DELETE FROM DbChords;

@@ -7,11 +7,26 @@ import de.libf.kordbook.data.model.ChordOrigin
 import de.libf.kordbook.data.model.Chords
 import de.libf.kordbook.data.model.SearchResult
 import io.ktor.http.parsing.ParseException
+import io.realm.kotlin.ext.realmListOf
+import io.realm.kotlin.ext.toRealmList
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
+@Deprecated("Use UltimateGuitarApiFetcher instead")
 class UltimateGuitarFetcher : ChordOrigin {
 
+    companion object {
+        const val NAME = "Ultimate Guitar (legacy)"
+        const val REMOTE_SOURCE = false
+    }
+
+    override val NAME: String
+        get() = Companion.NAME
+
+    override val REMOTE_SOURCE: Boolean
+        get() = Companion.REMOTE_SOURCE
 
 
     @Serializable
@@ -44,8 +59,8 @@ class UltimateGuitarFetcher : ChordOrigin {
 
                         @Serializable
                         internal data class UGTabMeta(
-                            val capo: Int,
-                            val tonality: String,
+                            val capo: Int? = null,
+                            val tonality: String? = null,
                         )
                     }
                 }
@@ -75,17 +90,17 @@ class UltimateGuitarFetcher : ChordOrigin {
 
     @Serializable
     private data class UGTab(
-        val id: Int,
-        val song_id: Int,
+        val id: Int? = null,
+        val song_id: Int? = null,
         val song_name: String,
         val artist_id: Int,
         val artist_name: String,
-        val version: Int,
-        val votes: Int,
-        val rating: Double,
-        val tonality_name: String,
+        val version: Int? = null,
+        val votes: Int? = null,
+        val rating: Double? = null,
+        val tonality_name: String = "",
         val tab_url: String,
-        val type: String
+        val type: String? = null
     )
 
     private val jsonIgnoringUnknownKeys = Json { ignoreUnknownKeys = true }
@@ -214,7 +229,7 @@ class UltimateGuitarFetcher : ChordOrigin {
         return cleanOutput
     }
 
-    private fun getUGJsonFromUrl(url: String): String {
+    private suspend fun getUGJsonFromUrl(url: String): String {
         val doc: Document = Ksoup.parseGetRequest(url = url)
         return doc
             .selectFirst(".js-store")
@@ -232,12 +247,6 @@ class UltimateGuitarFetcher : ChordOrigin {
             .replace("&#039;", "'")
     }
 
-    override val NAME: String
-        get() = "Ultimate Guitar"
-
-    override val REMOTE_SOURCE: Boolean
-        get() = true
-
     override suspend fun fetchSongByUrl(url: String): Chords {
         val songDataJson = getUGJsonFromUrl(url)
 
@@ -249,8 +258,10 @@ class UltimateGuitarFetcher : ChordOrigin {
 
         return Chords(
             id = songData.tab.id.toString(),
-            title = songData.tab.song_name,
+            songName = songData.tab.song_name,
+            songId = songData.tab.song_id.toString(),
             artist = songData.tab.artist_name,
+            artistId = songData.tab.artist_id.toString(),
             version = songData.tab.version.toString(),
             tonality = songData.tab_view.meta.tonality,
             capo = songData.tab_view.meta.capo.toString(),
@@ -258,23 +269,29 @@ class UltimateGuitarFetcher : ChordOrigin {
             related = songData.tab_view.versions.map {
                 Chords(
                     id = it.id.toString(),
-                    title = it.song_name,
+                    songName = it.song_name,
+                    songId = it.song_id.toString(),
                     artist = it.artist_name,
+                    artistId = it.artist_id.toString(),
                     version = it.version.toString(),
                     tonality = it.tonality_name,
                     capo = null,
                     chords = "",
-                    related = emptyList(),
+                    related = realmListOf(),
                     url = it.tab_url,
-                    origin = this
+                    origin = this.NAME
                 )
-            },
+            }.toRealmList(),
             url = url,
-            origin = this
+            origin = this.NAME
         )
     }
 
-    override suspend fun searchSongs(query: String): List<SearchResult> {
+    override suspend fun fetchSongBySearchResult(searchResult: SearchResult): Chords? {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun searchSongs(query: String, page: Int): List<SearchResult> {
         val searchDataJson = getUGJsonFromUrl("https://www.ultimate-guitar.com/search.php?search_type=title&value=$query")
 
         val searchData = jsonIgnoringUnknownKeys
@@ -283,16 +300,33 @@ class UltimateGuitarFetcher : ChordOrigin {
             .page
             .data
 
-        return searchData.results.map {
+        return searchData.results.filter {
+            val valid = it.id != null && it.song_id != null && it.version != null && it.votes != null && it.rating != null && it.tonality_name != null && it.type != null
+            val chords = it.type == "Chords"
+            if(!valid) println("removing invalid tab from search result: ${it}")
+
+            valid && chords
+        }.map {
             SearchResult(
-                title = it.song_name,
+                songName = it.song_name,
+                songId = it.song_id.toString(),
                 artist = it.artist_name,
-                version = it.version,
+                artistId = it.artist_id.toString(),
+                version = it.version.toString(),
                 rating = it.rating,
-                votes = it.votes.toDouble(),
+                votes = it.votes?.toDouble(),
                 id = it.id.toString(),
-                url = it.tab_url
+                url = it.tab_url,
+                origin = this.NAME
             )
-        }
+        }.sortedBy {
+            it.votes
+        }.reversed()
+    }
+
+    override fun searchSongsFlow(query: String): Flow<Pair<ChordOrigin, List<SearchResult>>> = flow {
+        if(query.isBlank()) return@flow
+
+        emit(this@UltimateGuitarFetcher to searchSongs(query))
     }
 }

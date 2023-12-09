@@ -1,12 +1,14 @@
 package de.libf.kordbook.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -15,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -33,7 +36,8 @@ data class ChordsFontFamily(
     val comment: FontFamily?,
     val section: FontFamily?,
     val chord: FontFamily?,
-    val text: FontFamily?
+    val text: FontFamily?,
+    val ui: FontFamily?
 ) {
     companion object {
         val default = ChordsFontFamily(
@@ -42,10 +46,13 @@ data class ChordsFontFamily(
             comment = null,
             section = null,
             chord = null,
-            text = null
+            text = null,
+            ui = null
         )
     }
 }
+
+val CHORD_REGEX = Regex("^([A-G]|N\\.?C\\.?)([#b])?([^/\\s-]*)(/([A-G]|N\\.?C\\.?)([#b])?)?\$")
 
 @Composable
 fun ChordProViewer(
@@ -55,22 +62,46 @@ fun ChordProViewer(
     isAutoScrollEnabled: Boolean = true,
     fontSize: Int = 16,
     fontFamily: ChordsFontFamily = ChordsFontFamily.default,
+    modifier: Modifier = Modifier,
+    onNewTopmostLine: (Int) -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
+    val lcstate = rememberLazyListState()
     val lines = chordProText.split("\n")
+    val firstVisibleItemIndex by remember {
+        derivedStateOf {
+            lcstate.firstVisibleItemIndex
+        }
+    }
+
+    LaunchedEffect(firstVisibleItemIndex) {
+        onNewTopmostLine(lines[firstVisibleItemIndex].length)
+        println("First visible item index changed to $firstVisibleItemIndex")
+    }
 
     LaunchedEffect(key1 = scrollSpeed, key2 = isAutoScrollEnabled) {
         if (isAutoScrollEnabled) {
             coroutineScope {
                 while (isActive) {
-                    delay(10) // Kleine Verzögerung für das kontinuierliche Scrollen
-                    scrollState.scrollTo(scrollState.value + (scrollSpeed).toInt())
+                    delay(50) // Kleine Verzögerung für das kontinuierliche Scrollen
+                    //scrollState.scrollTo(scrollState.value + (scrollSpeed).toInt())
+                    lcstate.scrollBy(scrollSpeed)
                 }
             }
         }
     }
 
-    LazyColumn {
+    LaunchedEffect(transposeBy) {
+        println("Transposing (Composable) changed to $transposeBy")
+    }
+
+    // Get first visible item index from lazycolumn
+
+
+    LazyColumn(
+        state = lcstate,
+        modifier = modifier
+    ) {
         items(lines) { line ->
             if(line.isDirective()) {
                 Row(modifier = Modifier.padding(bottom = 8.dp)) {
@@ -82,12 +113,16 @@ fun ChordProViewer(
                     )
                 }
             } else {
-                Row(verticalAlignment = Alignment.Bottom) {
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
                     parseChordProLineMapping(line, transposeBy).forEach { (chord, text) ->
                         Column {
                             if(chord != null) {
                                 ChordBox(
                                     chord = chord,
+                                    transposeBy = transposeBy,
                                     fontSize = fontSize,
                                     fontFamily = fontFamily.chord,
                                     modifier = Modifier.padding(end = 4.dp)
@@ -114,21 +149,34 @@ private fun String.isDirective(): Boolean {
 @Composable
 fun ChordBox(
     chord: String,
+    transposeBy: Int,
     fontSize: Int,
     fontFamily: FontFamily? = null,
     modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(8.dp))
-            .padding(horizontal = 2.dp, vertical = 1.dp)
-    ) {
+
+    if(CHORD_REGEX.matches(chord)) {
+        Box(
+            modifier = modifier
+                .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(8.dp))
+                .padding(horizontal = 2.dp, vertical = 1.dp)
+        ) {
+            Text(
+                text = transposeChord(chord, transposeBy),
+                fontSize = fontSize.sp,
+                fontFamily = fontFamily,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
+    } else {
         Text(
             text = chord,
             fontSize = fontSize.sp,
             fontFamily = fontFamily,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
     }
+
+
+
 }
 
 @Composable
@@ -318,7 +366,7 @@ private fun parseChordProLineMapping(line: String, transposeBy: Int): List<Pair<
 
     val regex = """\[(.*?)\]""".toRegex()
     regex.findAll(line).forEach { match ->
-        val nextChord = transposeChord(match.groupValues[1], transposeBy)
+        val nextChord = match.groupValues[1]
         val text = line.substring(lastIndex, match.range.first)
         musicSegments.add(lastChord to text)
         lastChord = nextChord
@@ -349,14 +397,29 @@ private fun parseChordProLine(line: String, transposeBy: Int): Pair<List<String>
 }
 
 fun transposeChord(chord: String, transposeBy: Int): String {
-    val notes = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
-    val index = notes.indexOf(chord)
+    if(chord.contains("/")) {
+        return chord.split("/").joinToString("/") { transposeChord(it, transposeBy) }
+    }
+    if(transposeBy != 0) {
+        print("Transposing $chord by $transposeBy to...")
+    }
+    val noteRegex = Regex("([A-H][b#]?)")
+    val baseNote = noteRegex.find(chord)?.value ?: return chord
+    val notesUS = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+    val notesDE = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "H")
+    val notes = if (baseNote.startsWith("H")) notesDE else notesUS
+    val index = notes.indexOf(baseNote)
     if (index == -1) {
         // Unbekannter Akkord, gebe ihn unverändert zurück
+        println("unknown chord $ :(")
         return chord
     }
     val transposedIndex = (index + transposeBy + 12) % 12
-    return notes[transposedIndex]
+    val targetChord = chord.replace(noteRegex, notes[transposedIndex])
+    if(transposeBy != 0) {
+        println("-> ${targetChord}")
+    }
+    return targetChord
 }
 
 
