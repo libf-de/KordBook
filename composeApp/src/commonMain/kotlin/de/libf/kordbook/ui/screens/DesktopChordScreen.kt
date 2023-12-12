@@ -3,22 +3,30 @@ package de.libf.kordbook.ui.screens
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,13 +45,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.libf.kordbook.data.model.ChordOrigin
 import de.libf.kordbook.data.model.Chords
+import de.libf.kordbook.data.model.ResultType
 import de.libf.kordbook.data.model.SearchResult
 import de.libf.kordbook.res.MR
 import de.libf.kordbook.ui.components.ChordProViewer
@@ -58,6 +70,7 @@ import kotlinx.datetime.Clock
 import moe.tlaster.precompose.flow.collectAsStateWithLifecycle
 import moe.tlaster.precompose.navigation.Navigator
 import org.koin.compose.koinInject
+import kotlin.math.max
 
 
 @Composable
@@ -67,7 +80,7 @@ fun DesktopChordScreen(
 ) {
     val viewModel = koinInject<DesktopScreenViewModel>()
 
-    val sidebarWidth = 400.dp
+    val sidebarWidth = 300.dp
 
     val chordFontFamily = ChordsFontFamily(
         metaName = fontFamilyResource(MR.fonts.MartianMono.bold),
@@ -76,7 +89,8 @@ fun DesktopChordScreen(
         section = fontFamilyResource(MR.fonts.MartianMono.medium),
         chord = fontFamilyResource(MR.fonts.MartianMono.bold),
         text = fontFamilyResource(MR.fonts.MartianMono.regular),
-        ui = fontFamilyResource(MR.fonts.MartianMono.light)
+        title = fontFamilyResource(MR.fonts.MartianMono.bold),
+        subtitle = fontFamilyResource(MR.fonts.MartianMono.medium),
     )
 
     //val chordList by viewModel.chordList.collectAsStateWithLifecycle(emptyMap())
@@ -84,9 +98,10 @@ fun DesktopChordScreen(
     val chords by viewModel.chordsToDisplay.collectAsStateWithLifecycle()
     val chordsLoaded by viewModel.chordsLoaded.collectAsStateWithLifecycle()
     val chordsSaved by viewModel.displayedChordsSaved.collectAsStateWithLifecycle(false)
+    val searchSuggestions by viewModel.searchSuggestions.collectAsStateWithLifecycle()
 
-    val autoScrollEnabled = remember { mutableStateOf(false) }
-    val autoScrollSpeed = remember { mutableStateOf(1f) }
+    val autoScrollEnabled = remember { mutableStateOf(true) }
+    val autoScrollSpeed = remember { mutableStateOf(0f) }
     val transposing = remember { mutableStateOf(0) }
     val fontSizeSp = remember { mutableStateOf(16) }
 
@@ -107,44 +122,50 @@ fun DesktopChordScreen(
             chordList = chordList,
             fontFamily = chordFontFamily,
             onChordSelected = viewModel::onSearchResultSelected, /* If we searched for chords, find the best version */
-            onQueryChanged = { },
+            onQueryChanged = viewModel::updateSearchSuggestions,
+            suggestions = searchSuggestions,
             onSearch = { viewModel.setSearchQuery(it); true },
         )
 
         Divider(modifier.width(1.dp).fillMaxHeight())
 
-        ChordView(
-            chords = chords,
-            isAutoScrollEnabled = autoScrollEnabled.value,
-            scrollSpeed = autoScrollSpeed.value,
-            transposeBy = transposing.value,
-            fontSize = fontSizeSp.value,
-            fontFamily = chordFontFamily,
-            modifier = Modifier
-                .alpha(alpha)
-                .padding(horizontal = 24.dp)
-                .fillMaxHeight()
-                .weight(1f),
-        )
+        Box {
+            ChordView(
+                chords = chords,
+                isAutoScrollEnabled = autoScrollEnabled.value,
+                scrollSpeed = autoScrollSpeed.value,
+                transposeBy = transposing.value,
+                fontSize = fontSizeSp.value,
+                fontFamily = chordFontFamily,
+                modifier = Modifier
+                    .alpha(alpha)
+                    .padding(horizontal = 24.dp)
+                    .fillMaxSize(),
+            )
 
-        ChordViewSidebar(
-            chords = chords,
-            fontSize = fontSizeSp,
-            scrollEnabled = autoScrollEnabled,
-            scrollSpeed = autoScrollSpeed,
-            transposing = transposing,
-            modifier = Modifier.alpha(alpha).width(sidebarWidth).fillMaxHeight(),
-            onChordSelected = { viewModel.onSearchResultSelected(it, false) },
-            onSaveChordsClicked = {
-                if (chordsSaved) {
-                    viewModel.deleteChords(chords)
-                } else {
-                    viewModel.saveChords(chords)
-                }
-            },
-            fontFamily = chordFontFamily,
-            currentChordsSaved = chordsSaved
-        )
+            ChordViewSidebar(
+                chords = chords,
+                fontSize = fontSizeSp,
+                scrollEnabled = autoScrollEnabled,
+                scrollSpeed = autoScrollSpeed,
+                transposing = transposing,
+                modifier = Modifier.alpha(alpha).width(sidebarWidth).fillMaxHeight().align(Alignment.TopEnd),
+                onChordSelected = { viewModel.onSearchResultSelected(it, false) },
+                onSaveChordsClicked = {
+                    if (chordsSaved) {
+                        viewModel.deleteChords(chords)
+                    } else {
+                        viewModel.saveChords(chords)
+                    }
+                },
+                fontFamily = chordFontFamily,
+                currentChordsSaved = chordsSaved
+            )
+        }
+
+
+
+
 
 
     }
@@ -174,13 +195,46 @@ fun ChordList(
     Column(modifier = modifier) {
         SearchBar(
             query = query,
-            onQueryChange = { query = it },
+            onQueryChange = { query = it;  },
             active = searchActive,
             onActiveChange = { searchActive = it },
             onSearch = { if (onSearch(it)) searchActive = false },
             modifier = Modifier.padding(horizontal = searchPadding.dp).fillMaxWidth(),
+            leadingIcon = {
+                Icon(
+                    Icons.Rounded.Search,
+                    contentDescription = "Search",
+                )
+            },
+            trailingIcon = {
+                if(query.isNotBlank()) {
+                    IconButton(
+                        onClick = { query = "" },
+                        modifier = Modifier
+                    ) {
+                        Icon(
+                            Icons.Rounded.Clear,
+                            contentDescription = "Search",
+                        )
+                    }
+                }
+            }
         ) {
-            Text("Suggestions here!")
+            LazyColumn {
+                items(suggestions) { suggestion ->
+                    Text(
+                        text = suggestion.songName,
+                        modifier = Modifier.clickable {
+                            query = suggestion.songName
+                            if(onSearch(query)) searchActive = false
+
+                            if(suggestion.type == ResultType.RESULT) {
+                                onChordSelected(suggestion, true)
+                            }
+                        }
+                    )
+                }
+            }
         }
         LazyColumn(modifier = Modifier) {
             chordList.mapValues {
@@ -225,7 +279,7 @@ fun ChordView(
 ) {
     Row(modifier = modifier) {
         ChordProViewer(
-            chordProText = chords.chords ?: "",
+            chords = chords,
             transposeBy = transposeBy,
             isAutoScrollEnabled = isAutoScrollEnabled,
             scrollSpeed = scrollSpeed,
@@ -252,44 +306,29 @@ fun ChordViewSidebar(
     Column(modifier = modifier.fillMaxWidth().fillMaxHeight()) {
         ElevatedCard(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp, start = 16.dp, end = 16.dp),
             ) {
-                Row {
-                    Text(
-                        chords.songName,
-                        style = MaterialTheme.typography.headlineSmall,
-                        softWrap = false,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    if (currentChordsSaved != null) {
-                        Crossfade(targetState = currentChordsSaved) { saved ->
-                            Icon(
-                                imageVector = if (saved) Icons.Rounded.Favorite
-                                else Icons.Rounded.FavoriteBorder,
-                                contentDescription = "List",
-                                modifier = Modifier.size(16.dp).clickable {
-                                    onSaveChordsClicked()
-                                }
-                            )
-                        }
+                /*if (currentChordsSaved != null) {
+                    Crossfade(targetState = currentChordsSaved) { saved ->
+                        Icon(
+                            imageVector = if (saved) Icons.Rounded.Favorite
+                            else Icons.Rounded.FavoriteBorder,
+                            contentDescription = "List",
+                            modifier = Modifier.size(16.dp).clickable {
+                                onSaveChordsClicked()
+                            }
+                        )
                     }
+                }*/
 
-                }
-                Text(
-                    "von ${chords.artist}",
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis,
-                )
-
-                Text("Version ${chords.version}")
 
                 SidebarControls(
                     fontSize = fontSize,
                     scrollSpeed = scrollSpeed,
                     scrollEnabled = scrollEnabled,
-                    transposing = transposing
+                    transposing = transposing,
+                    currentChordsSaved = currentChordsSaved,
+                    onSaveChordsClicked = onSaveChordsClicked,
                 )
 
 
@@ -331,33 +370,76 @@ fun ChordViewSidebar(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SidebarControls(
     fontSize: MutableState<Int>,
     scrollSpeed: MutableState<Float>,
     scrollEnabled: MutableState<Boolean>,
     transposing: MutableState<Int>,
+    currentChordsSaved: Boolean? = null,
+    onSaveChordsClicked: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var lastAutoscrollClick by remember { mutableStateOf(0L) }
     val fontSizePx = with(LocalDensity.current) { fontSize.value.sp.toPx() }
 
     Column(modifier = modifier) {
+        if (currentChordsSaved != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Noten abspeichern:",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
+
+                Crossfade(targetState = currentChordsSaved) { saved ->
+                    IconButton(
+                        onClick = {
+                            onSaveChordsClicked()
+                        },
+                        modifier = Modifier
+                    ) {
+                        Icon(
+                            imageVector = if (saved) Icons.Rounded.Favorite
+                            else Icons.Rounded.FavoriteBorder,
+                            contentDescription = "List",
+                            modifier = Modifier.clickable {
+                                onSaveChordsClicked()
+                            }
+                        )
+                    }
+
+                }
+            }
+        }
+
+
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Text(
+                text = "Textgröße:",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f)
+            )
+
             IconButton(onClick = { fontSize.value += 2 }) {
                 Icon(
-                    Icons.Rounded.KeyboardArrowUp,
+                    painterResource(MR.images.font_larger),
                     contentDescription = "List"
                 )
             }
             Text(
                 text = fontSize.value.toString(),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.width(36.dp)
             )
             IconButton(onClick = { fontSize.value -= 2 }) {
                 Icon(
-                    Icons.Rounded.KeyboardArrowDown,
+                    painterResource(MR.images.font_smaller),
                     contentDescription = "List"
                 )
             }
@@ -366,14 +448,8 @@ private fun SidebarControls(
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { scrollSpeed.value += 0.1f }) {
-                Icon(
-                    Icons.Rounded.KeyboardArrowUp,
-                    contentDescription = "List"
-                )
-            }
-            Text(
-                text = scrollSpeed.value.toSingleDecimalString(),
+
+            Row(
                 modifier = Modifier.clickable {
                     if (lastAutoscrollClick == 0L) {
                         lastAutoscrollClick = Clock.System.now().toEpochMilliseconds()
@@ -386,11 +462,56 @@ private fun SidebarControls(
                         lastAutoscrollClick = 0
                         scrollEnabled.value = true
                     }
-                }
-            )
-            IconButton(onClick = { scrollSpeed.value -= 0.1f }) {
+                }.height(40.dp).weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Auto-Scroll:",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier
+                )
+            }
+
+
+            IconButton(onClick = { scrollSpeed.value += 0.1f; scrollEnabled.value = true }) {
                 Icon(
-                    Icons.Rounded.KeyboardArrowDown,
+                    painterResource(MR.images.faster),
+                    contentDescription = "List"
+                )
+            }
+
+            Row(
+                modifier = Modifier.height(40.dp).combinedClickable(
+                    onClick = {
+
+                    },
+                    onLongClick = {
+                        scrollSpeed.value = if(scrollSpeed.value > 0f) 0f else 1f
+                    }
+                ).pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (event.type == PointerEventType.Scroll) {
+                                scrollSpeed.value = max(0f,
+                                    scrollSpeed.value - (event.changes.first().scrollDelta.y * 0.5f))
+                            }
+                            scrollEnabled.value = true
+                        }
+                    }
+                },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = scrollSpeed.value.toSingleDecimalString(),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.width(36.dp)
+                )
+            }
+
+            IconButton(onClick = { if(scrollSpeed.value > 0) scrollSpeed.value -= 0.1f; scrollEnabled.value = true }) {
+                Icon(
+                    painterResource(MR.images.slower),
                     contentDescription = "List"
                 )
             }
@@ -399,6 +520,12 @@ private fun SidebarControls(
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Text(
+                text = "Transpose:",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f)
+            )
+
             IconButton(onClick = { transposing.value++ }) {
                 Icon(
                     painterResource(MR.images.transpose_up),
@@ -407,6 +534,8 @@ private fun SidebarControls(
             }
             Text(
                 text = transposing.value.toTransposedString(),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.width(36.dp)
             )
             IconButton(onClick = { transposing.value-- }) {
                 Icon(

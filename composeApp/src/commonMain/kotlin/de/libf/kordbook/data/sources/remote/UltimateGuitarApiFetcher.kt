@@ -2,6 +2,7 @@ package de.libf.kordbook.data.sources.remote
 
 import de.libf.kordbook.data.model.ChordOrigin
 import de.libf.kordbook.data.model.Chords
+import de.libf.kordbook.data.model.ResultType
 import de.libf.kordbook.data.model.SearchResult
 import de.libf.kordbook.data.tools.Md5
 import io.github.aakira.napier.Napier
@@ -96,6 +97,11 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
     )
 
     @Serializable
+    private data class UGSuggestions(
+        val suggestions: List<String>
+    )
+
+    @Serializable
     private data class UGTab(
         val id: Int,
         val song_id: Int? = null,
@@ -186,7 +192,7 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
             println(input)
             println("==========================================")
 
-            val CHORD_LINE_REGEX = Regex("^\\s*((([A-G]|N\\.?C\\.?)([#b])?([^/\\s-]*)(/([A-G]|N\\.?C\\.?)([#b])?)?)(\\s|\$)+)+(\\s|\$)+")
+            val CHORD_LINE_REGEX = Regex("^\\s*((([A-G]|N\\.?C\\.?)([#b])?([^/\\s-:]*)(/([A-G]|N\\.?C\\.?)([#b])?)?)(\\s|\$)+)+(\\s|\$)+")
 
             val saneInput = input
                 .replace(Regex("(\\[[A-Z][A-Za-z0-9 ]+\\])\n\n", RegexOption.MULTILINE), "$1\n")
@@ -327,23 +333,6 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
         return fetchSongByUrl(searchResult.url)
     }
 
-
-        /*
-        val firstChords = fetchSongBySearchResultImpl(searchResult) ?: return null
-        return if(firstChords.versions.size > 1) {
-            val targetChordsUrl = firstChords
-                .versions
-                .sortedBy { it.ratingVotesRatio() }
-                .reversed()
-                .first()
-                .url
-
-            fetchSongByUrlImpl(targetChordsUrl)
-        } else {
-            firstChords
-        }
-    }*/
-
     override suspend fun searchSongs(query: String, page: Int): List<SearchResult> {
         var start = Clock.System.now().toEpochMilliseconds()
         println("start running from ${NAME} at ${start}")
@@ -392,6 +381,41 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
         if(query.isBlank()) return@flow
 
         emit(this@UltimateGuitarApiFetcher to searchSongs(query))
+    }
+
+    suspend fun getSuggestions(query: String): List<SearchResult> {
+        val searchSuggestions = client.get("https://api.ultimate-guitar.com/api/v1/tab/suggestion?q=${query.encodeURLParameter()}")
+        if (searchSuggestions.status.value !in 200..299) {
+            if(searchSuggestions.status.value == 404) return emptyList()
+
+            Napier.e { "Unexpected code: $searchSuggestions" }
+            throw Exception("Unexpected code: $searchSuggestions")
+        }
+
+        return searchSuggestions.body<UGSuggestions>().suggestions.map {
+            SearchResult(
+                songName = it,
+                songId = it,
+                artist = "",
+                artistId = "",
+                version = null,
+                rating = null,
+                votes = null,
+                id = "",
+                url = "",
+                origin = this.NAME,
+                type = ResultType.SUGGESTION
+            )
+
+        }
+    }
+
+    override suspend fun getSearchSuggestions(query: String): List<SearchResult> {
+        val result = searchSongs(query).take(3) + getSuggestions(query).take(5)
+
+        println("Got suggestions vom UG: " + result.map { it.songName }.joinToString(", "))
+
+        return result
     }
 }
 

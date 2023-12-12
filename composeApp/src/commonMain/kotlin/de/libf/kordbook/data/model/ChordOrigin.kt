@@ -13,4 +13,6 @@ interface ChordOrigin {
     suspend fun searchSongs(query: String, page: Int = 1): List<SearchResult>
 
     fun searchSongsFlow(query: String): Flow<Pair<ChordOrigin, List<SearchResult>>>
+
+    suspend fun getSearchSuggestions(query: String): List<SearchResult>
 }

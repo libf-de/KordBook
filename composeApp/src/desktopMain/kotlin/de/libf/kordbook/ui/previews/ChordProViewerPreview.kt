@@ -19,10 +19,10 @@ fun ChordProViewerPreview() {
             "The [G]baffled king [E7]composing halle[Am]lujah\n" +
             "{end_of_verse}\n"
 
-    ChordProViewer(
+    /*ChordProViewer(
         chordProText = hallelujah,
         transposeBy = 0,
         scrollSpeed = 1f,
         isAutoScrollEnabled = false
-    )
+    )*/
 }

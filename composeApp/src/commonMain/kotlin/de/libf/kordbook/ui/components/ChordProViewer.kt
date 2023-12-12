@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.libf.kordbook.data.model.Chords
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -37,7 +38,8 @@ data class ChordsFontFamily(
     val section: FontFamily?,
     val chord: FontFamily?,
     val text: FontFamily?,
-    val ui: FontFamily?
+    val title: FontFamily?,
+    val subtitle: FontFamily?,
 ) {
     companion object {
         val default = ChordsFontFamily(
@@ -47,7 +49,8 @@ data class ChordsFontFamily(
             section = null,
             chord = null,
             text = null,
-            ui = null
+            title = null,
+            subtitle = null,
         )
     }
 }
@@ -56,7 +59,7 @@ val CHORD_REGEX = Regex("^([A-G]|N\\.?C\\.?)([#b])?([^/\\s-]*)(/([A-G]|N\\.?C\\.
 
 @Composable
 fun ChordProViewer(
-    chordProText: String,
+    chords: Chords,
     transposeBy: Int = 0,
     scrollSpeed: Float = 1f,
     isAutoScrollEnabled: Boolean = true,
@@ -67,7 +70,7 @@ fun ChordProViewer(
 ) {
     val scrollState = rememberScrollState()
     val lcstate = rememberLazyListState()
-    val lines = chordProText.split("\n")
+    val lines = (chords.chords ?: "").split("\n")
     val firstVisibleItemIndex by remember {
         derivedStateOf {
             lcstate.firstVisibleItemIndex
@@ -102,6 +105,23 @@ fun ChordProViewer(
         state = lcstate,
         modifier = modifier
     ) {
+        item {
+            Text(
+                text = chords.artist ?: "",
+                style = MaterialTheme.typography.headlineSmall,
+                fontFamily = fontFamily.subtitle,
+                modifier = Modifier.padding(top = 32.dp)
+            )
+        }
+        item {
+            Text(
+                text = chords.songName ?: "",
+                style = MaterialTheme.typography.headlineLarge,
+                fontFamily = fontFamily.title,
+                modifier = Modifier.padding(top = 0.dp)
+            )
+        }
+
         items(lines) { line ->
             if(line.isDirective()) {
                 Row(modifier = Modifier.padding(bottom = 8.dp)) {
@@ -157,14 +177,14 @@ fun ChordBox(
     if(CHORD_REGEX.matches(chord)) {
         Box(
             modifier = modifier
-                .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.tertiaryContainer, RoundedCornerShape(8.dp))
                 .padding(horizontal = 2.dp, vertical = 1.dp)
         ) {
             Text(
                 text = transposeChord(chord, transposeBy),
                 fontSize = fontSize.sp,
                 fontFamily = fontFamily,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
             )
         }
     } else {
@@ -222,8 +242,8 @@ private fun MakeMetaBox(
                             value,
                             isItalic = true,
                             fontFamily = fontFamily.comment,
-                            bgColor = MaterialTheme.colorScheme.tertiaryContainer,
-                            fgColor = MaterialTheme.colorScheme.onTertiaryContainer
+                            bgColor = MaterialTheme.colorScheme.primaryContainer,
+                            fgColor = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                 }
 
@@ -312,8 +332,8 @@ private data class MetaBoxEnv(
     @Composable
     fun MetaBox(
         textValue: String,
-        bgColor: Color = MaterialTheme.colorScheme.tertiaryContainer,
-        fgColor: Color = MaterialTheme.colorScheme.onTertiaryContainer,
+        bgColor: Color = MaterialTheme.colorScheme.primaryContainer,
+        fgColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
         fontFamily: FontFamily? = this.fontFamily.metaValue,
         isItalic: Boolean = false,
         modifier: Modifier = this.modifier) {
@@ -335,8 +355,8 @@ private data class MetaBoxEnv(
     @Composable
     fun MetaBox(
         textValue: AnnotatedString,
-        bgColor: Color = MaterialTheme.colorScheme.tertiaryContainer,
-        fgColor: Color = MaterialTheme.colorScheme.onTertiaryContainer,
+        bgColor: Color = MaterialTheme.colorScheme.primaryContainer,
+        fgColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
         fontFamily: FontFamily? = this.fontFamily.metaValue,
         isItalic: Boolean = false,
         modifier: Modifier = this.modifier) {

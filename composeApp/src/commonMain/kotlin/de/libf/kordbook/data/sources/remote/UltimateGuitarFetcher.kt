@@ -329,4 +329,8 @@ class UltimateGuitarFetcher : ChordOrigin {
 
         emit(this@UltimateGuitarFetcher to searchSongs(query))
     }
+
+    override suspend fun getSearchSuggestions(query: String): List<SearchResult> {
+        TODO("Not yet implemented")
+    }
 }

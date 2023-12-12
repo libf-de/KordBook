@@ -153,6 +153,14 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
                 .map { dbChords -> dbChords.toSearchResult() }
         }
 
+    override suspend fun getSearchSuggestions(query: String): List<SearchResult> {
+        return database.chordsQueries
+            .search(query)
+            .executeAsList()
+            .filter { it.chords != null }
+            .map { it.toSearchResult() }
+    }
+
     private fun DbChords?.toChords(): Chords? {
         if(this == null) return null
 

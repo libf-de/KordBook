@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.compose.AppTheme
 import de.libf.kordbook.data.ChordsDatabase
 import de.libf.kordbook.data.DbChords
 import de.libf.kordbook.data.model.LocalChordOrigin
@@ -84,7 +85,7 @@ fun App() {
     Napier.base(DebugAntilog())
 
     KoinContext {
-        MaterialTheme {
+        AppTheme {
             val navigator = rememberNavigator()
 
             Scaffold { paddingValues ->

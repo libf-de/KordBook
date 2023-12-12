@@ -131,7 +131,7 @@ fun ChordsScreen(
         }
     ) {
         ChordProViewer(
-            chordProText = chords.chords ?: "",
+            chords = chords,
             transposeBy = transposing,
             isAutoScrollEnabled = scrolling,
             scrollSpeed = scrollSpeed,
@@ -143,7 +143,8 @@ fun ChordsScreen(
                 section = fontFamilyResource(MR.fonts.MartianMono.medium),
                 chord = fontFamilyResource(MR.fonts.MartianMono.bold),
                 text = fontFamilyResource(MR.fonts.MartianMono.regular),
-                ui = fontFamilyResource(MR.fonts.MartianMono.thin),
+                title = fontFamilyResource(MR.fonts.MartianMono.bold),
+                subtitle = fontFamilyResource(MR.fonts.MartianMono.medium),
             ),
             modifier = Modifier.padding(it),
             onNewTopmostLine = { lineLength ->

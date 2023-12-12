@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapConcat
@@ -32,12 +33,34 @@ class ChordsRepository : KoinComponent {
     val currentChordsSaved: Flow<Boolean> = chordsToDisplay.flatMapMerge {
         localSrc.haveChords(it)
     }
+    val searchSuggestions = MutableStateFlow(emptyList<SearchResult>())
+
+    var suggestionJobs: MutableList<Job> = mutableListOf()
 
     init {
         CoroutineScope(Dispatchers.IO).launch {
             currentChordsSaved.collect {
                 println("Current chords saved: $it")
             }
+        }
+    }
+
+    fun getSearchSuggestions(query: String) {
+        suggestionJobs.forEach { it.cancel()  }
+
+        var suggestionList = emptyList<SearchResult>()
+        val listMutex = Mutex()
+
+        allSources.forEach {
+            suggestionJobs.add(
+                CoroutineScope(Dispatchers.IO).launch {
+                    val result = it.getSearchSuggestions(query)
+                    listMutex.lock()
+                    suggestionList = suggestionList + result
+                    searchSuggestions.emit(suggestionList)
+                    listMutex.unlock()
+                }
+            )
         }
     }
 

@@ -34,6 +34,7 @@ class DesktopScreenViewModel : ViewModel(), KoinComponent {
     val chordsToDisplay = repo.chordsToDisplay
     val displayedChordsSaved = repo.currentChordsSaved
     var chordsLoaded = MutableStateFlow(false)
+    val searchSuggestions = repo.searchSuggestions
 
     init {
         viewModelScope.launch {
@@ -55,6 +56,12 @@ class DesktopScreenViewModel : ViewModel(), KoinComponent {
             } else {
                 repo.fetchChordsFromUrl(searchResult.url)
             }
+        }
+    }
+
+    fun updateSearchSuggestions(query: String) {
+        viewModelScope.launch {
+            repo.getSearchSuggestions(query)
         }
     }
 
