@@ -176,7 +176,7 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
                         rating = it.rating,
                         votes = it.votes?.toDouble(),
                         capo = null,
-                        chords = "",
+                        chords = null,
                         related = realmListOf(),
                         url = "UG::${it.id}",
                         origin = NAME

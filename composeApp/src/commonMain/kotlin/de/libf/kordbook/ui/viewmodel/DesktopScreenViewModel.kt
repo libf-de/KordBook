@@ -12,12 +12,14 @@ import de.libf.kordbook.data.model.ResultType
 import de.libf.kordbook.data.model.SearchResult
 import de.libf.kordbook.data.repository.ChordsRepository
 import de.libf.kordbook.data.sources.remote.UltimateGuitarApiFetcher
+import de.libf.kordbook.data.tools.levenshtein
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import moe.tlaster.precompose.viewmodel.ViewModel
 import moe.tlaster.precompose.viewmodel.viewModelScope
@@ -35,6 +37,7 @@ class DesktopScreenViewModel : ViewModel(), KoinComponent {
     val displayedChordsSaved = repo.currentChordsSaved
     var chordsLoaded = MutableStateFlow(false)
     val searchSuggestions = repo.searchSuggestions
+    val listLoading = repo.listLoading
 
     init {
         viewModelScope.launch {

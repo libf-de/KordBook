@@ -77,6 +77,26 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
                     chords = it.chords
                 )
             }
+
+            chords.related.forEach {
+                database.chordsQueries.insertChords(
+                    id = it.id,
+                    songName = it.songName,
+                    songId = it.songId,
+                    artist = it.artist,
+                    artistId = it.artistId,
+                    versions = emptyList(),
+                    related = emptyList(),
+                    url = it.url,
+                    origin = it.origin,
+                    rating = it.rating,
+                    votes = it.votes,
+                    version = it.version,
+                    tonality = it.tonality,
+                    capo = it.capo,
+                    chords = it.chords
+                )
+            }
         }
     }
 

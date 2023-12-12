@@ -5,11 +5,13 @@ import de.libf.kordbook.data.model.Chords
 import de.libf.kordbook.data.model.LocalChordOrigin
 import de.libf.kordbook.data.model.SearchResult
 import de.libf.kordbook.data.sources.remote.UltimateGuitarApiFetcher
+import de.libf.kordbook.data.tools.levenshtein
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapConcat
@@ -34,6 +36,7 @@ class ChordsRepository : KoinComponent {
         localSrc.haveChords(it)
     }
     val searchSuggestions = MutableStateFlow(emptyList<SearchResult>())
+    val listLoading = MutableStateFlow(false)
 
     var suggestionJobs: MutableList<Job> = mutableListOf()
 
@@ -50,6 +53,13 @@ class ChordsRepository : KoinComponent {
 
         var suggestionList = emptyList<SearchResult>()
         val listMutex = Mutex()
+        var numDone = 0
+
+        suggestionJobs.add(
+            CoroutineScope(Dispatchers.IO).launch {
+                listLoading.emit(true)
+            }
+        )
 
         allSources.forEach {
             suggestionJobs.add(
@@ -57,11 +67,26 @@ class ChordsRepository : KoinComponent {
                     val result = it.getSearchSuggestions(query)
                     listMutex.lock()
                     suggestionList = suggestionList + result
+                    suggestionList = suggestionList.sortedBy {
+                        val levSong = levenshtein(it.songName, query)
+                        val levArtist = levenshtein(it.artist, query)
+                        levSong + levArtist
+                    }
                     searchSuggestions.emit(suggestionList)
+                    numDone++
                     listMutex.unlock()
                 }
             )
         }
+
+        suggestionJobs.add(
+            CoroutineScope(Dispatchers.IO).launch {
+                while(numDone < allSources.size) {
+                    delay(100)
+                }
+                listLoading.emit(false)
+            }
+        )
     }
 
     suspend fun searchChordsList(query: String) {
@@ -113,12 +138,20 @@ class ChordsRepository : KoinComponent {
     suspend fun fetchBestVersionFromUrl(url: String) {
         val firstVersion = getChordsFromUrl(url) ?: return
         if(firstVersion.versions.size > 1) {
+            println(firstVersion.versions.sortedBy { it.ratingVotesRatio() }.reversed().map {
+                "${it.version} -> ${it.rating} / ${it.votes} / ${it.ratingVotesRatio()}"
+            })
+
             val targetChordsUrl = firstVersion
                 .versions
                 .sortedBy { it.ratingVotesRatio() }
                 .reversed()
                 .first()
+
+            if(targetChordsUrl.ratingVotesRatio()!! > firstVersion.ratingVotesRatio()!!) {
                 .url
+            }
+
 
             getChordsFromUrl(targetChordsUrl)?.let {
                 chordsToDisplay.emit(it)

@@ -53,6 +53,9 @@ fun ChordItem(
             Text(
                 text = "(${searchResult.votes?.toInt()})",
                 style = MaterialTheme.typography.bodySmall,
+                softWrap = false,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
             )
         }
