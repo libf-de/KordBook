@@ -17,7 +17,7 @@ kotlin {
     androidTarget {
         compilations.all {
             kotlinOptions {
-                jvmTarget = "1.8"
+                jvmTarget = "11"
             }
         }
     }
@@ -50,15 +50,19 @@ kotlin {
         //            implementation(libs.sqldelight.driver.native)
 
 
-        androidMain.dependencies {
-            implementation(libs.compose.ui)
-            implementation(libs.compose.ui.tooling.preview)
-            implementation(libs.androidx.activity.compose)
-            compileOnly(libs.realm.base)
-            compileOnly(libs.realm.sync)
-            implementation(libs.koin.android)
-            // Android Database Driver
-            implementation(libs.sqldelight.driver.android)
+        val androidMain by getting {
+            dependsOn(commonMain.get())
+
+            dependencies {
+                implementation(libs.compose.ui)
+                implementation(libs.compose.ui.tooling.preview)
+                implementation(libs.androidx.activity.compose)
+                compileOnly(libs.realm.base)
+                compileOnly(libs.realm.sync)
+                implementation(libs.koin.android)
+                // Android Database Driver
+                implementation(libs.sqldelight.driver.android)
+            }
         }
 
         val desktopMain by getting {
@@ -153,8 +157,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     dependencies {
         debugImplementation(libs.compose.ui.tooling)

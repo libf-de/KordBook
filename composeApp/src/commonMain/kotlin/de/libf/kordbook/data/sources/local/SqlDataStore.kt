@@ -16,14 +16,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 class SqlDataStore : LocalChordOrigin(), KoinComponent {
-    val database: ChordsDatabase by inject()
+    private val database: ChordsDatabase by inject()
 
     override fun getAllChordsFlow(): Flow<Pair<ChordOrigin, List<SearchResult>>>
     = database.chordsQueries
@@ -114,7 +113,7 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
 
 
     companion object {
-        const val NAME = "Local"
+        const val NAME = LocalChordOrigin.NAME
         const val REMOTE_SOURCE = false
 
         val ListOfStringsAdapter = object : ColumnAdapter<List<String>, String> {
@@ -184,9 +183,9 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
     private fun DbChords?.toChords(): Chords? {
         if(this == null) return null
 
-        val versions = this.versions.map {
+        val versions = this.versions.mapNotNull {
             val relatedChord = database.chordsQueries.selectVersionsById(it).executeAsOneOrNull()
-            if(relatedChord != null) {
+            if (relatedChord != null) {
                 Chords(
                     id = relatedChord.id,
                     songName = relatedChord.songName,
@@ -199,16 +198,16 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
                     votes = relatedChord.votes,
                     version = relatedChord.version,
                     url = relatedChord.url,
-                    origin = this.origin,
+                    origin = Companion.NAME,
                 )
             } else {
                 null
             }
-        }.filterNotNull()
+        }
 
-        val related = this.related.map {
+        val related = this.related.mapNotNull {
             val relatedChord = database.chordsQueries.selectVersionsById(it).executeAsOneOrNull()
-            if(relatedChord != null) {
+            if (relatedChord != null) {
                 Chords(
                     id = relatedChord.id,
                     songName = relatedChord.songName,
@@ -221,12 +220,12 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
                     votes = relatedChord.votes,
                     version = relatedChord.version,
                     url = relatedChord.url,
-                    origin = this.origin,
+                    origin = Companion.NAME
                 )
             } else {
                 null
             }
-        }.filterNotNull()
+        }
 
         return Chords(
             id = this.id,
@@ -237,7 +236,7 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
             versions = versions,
             related = related,
             url = this.url,
-            origin = this.origin,
+            origin = Companion.NAME,
             rating = this.rating,
             votes = this.votes,
             version = this.version,
@@ -247,21 +246,22 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
         )
     }
 
+    private fun DbChords.toSearchResult(): SearchResult {
+        return SearchResult(
+            songName = this.songName,
+            songId = this.songId,
+            artist = this.artist,
+            artistId = this.artistId,
+            version = this.version,
+            rating = this.rating,
+            votes = this.votes,
+            id = this.id,
+            url = this.url,
+            origin = Companion.NAME,
+        )
+    }
 
 }
 
-private fun DbChords.toSearchResult(): SearchResult {
-    return SearchResult(
-        songName = this.songName,
-        songId = this.songId,
-        artist = this.artist,
-        artistId = this.artistId,
-        version = this.version,
-        rating = this.rating,
-        votes = this.votes,
-        id = this.id,
-        url = this.url,
-        origin = this.origin,
-    )
-}
+
 

@@ -37,11 +37,11 @@ data class Chords(
         )
     }
 
-    fun ratingVotesRatio(): Double? {
+    fun ratingVotesRatio(): Double {
         return (this.votes?.let { it1 ->
             this.rating?.times(
                 it1
             )
-        })
+        }) ?: 0.0
     }
 }

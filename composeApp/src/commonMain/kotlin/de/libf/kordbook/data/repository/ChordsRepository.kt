@@ -148,14 +148,11 @@ class ChordsRepository : KoinComponent {
                 .reversed()
                 .first()
 
-            if(targetChordsUrl.ratingVotesRatio()!! > firstVersion.ratingVotesRatio()!!) {
-                .url
-            }
-
-
-            getChordsFromUrl(targetChordsUrl)?.let {
-                chordsToDisplay.emit(it)
-                return
+            if(targetChordsUrl.ratingVotesRatio() > firstVersion.ratingVotesRatio()) {
+                getChordsFromUrl(targetChordsUrl.url)?.let {
+                    chordsToDisplay.emit(it)
+                    return
+                }
             }
         }
         chordsToDisplay.emit(firstVersion)

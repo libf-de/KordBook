@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import de.libf.kordbook.data.model.LocalChordOrigin
 import de.libf.kordbook.data.model.SearchResult
 
 @Composable
@@ -38,26 +39,30 @@ fun ChordItem(
                 modifier = Modifier.weight(1f)
             )
 
-            RatingBar(
-                value = searchResult.rating?.toFloat() ?: 0f,
-                stepSize = StepSize.HALF,
-                style = RatingBarStyle.Stroke(),
-                size = 16.dp,
-                spaceBetween = 2.dp,
-                isIndicator = true,
-                onValueChange = {},
-                onRatingChanged = {},
-                modifier = Modifier
-            )
+            if(searchResult.origin == LocalChordOrigin.NAME) {
+                RatingBar(
+                    value = searchResult.rating?.toFloat() ?: 0f,
+                    stepSize = StepSize.HALF,
+                    style = RatingBarStyle.Stroke(),
+                    size = 16.dp,
+                    spaceBetween = 2.dp,
+                    isIndicator = true,
+                    onValueChange = {},
+                    onRatingChanged = {},
+                    modifier = Modifier
+                )
 
-            Text(
-                text = "(${searchResult.votes?.toInt()})",
-                style = MaterialTheme.typography.bodySmall,
-                softWrap = false,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
-            )
+                Text(
+                    text = "(${searchResult.votes?.toInt()})",
+                    style = MaterialTheme.typography.bodySmall,
+                    softWrap = false,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
+                )
+            }
+
+
         }
 
         Row(
@@ -67,15 +72,19 @@ fun ChordItem(
             Text(
                 text = searchResult.artist,
                 style = MaterialTheme.typography.titleMedium,
+                softWrap = false,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
 
-
-            VersionBox(
-                text = "v${searchResult.version}",
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier
-            )
+            if(searchResult.origin == LocalChordOrigin.NAME) {
+                VersionBox(
+                    text = "v${searchResult.version}",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                )
+            }
         }
 
         Divider()
