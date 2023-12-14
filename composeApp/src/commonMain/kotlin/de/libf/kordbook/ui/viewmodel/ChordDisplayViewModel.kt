@@ -2,6 +2,7 @@ package de.libf.kordbook.ui.viewmodel
 
 import de.libf.kordbook.data.model.Chords
 import de.libf.kordbook.data.model.LocalChordOrigin
+import de.libf.kordbook.data.repository.ChordsRepository
 import de.libf.kordbook.data.sources.remote.UltimateGuitarApiFetcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -11,22 +12,19 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 class ChordDisplayViewModel : ViewModel(), KoinComponent {
-    val localStore: LocalChordOrigin by inject()
-    val ugStore: UltimateGuitarApiFetcher by inject()
-    val allSources = listOf(localStore, ugStore)
+    val repo: ChordsRepository by inject()
 
-    val chords = MutableStateFlow(Chords.EMPTY)
+    val chordsToDisplay = repo.chordsToDisplay
+    val displayedChordsSaved = repo.currentChordsSaved
 
-    fun getChordsFromUrl(url: String) {
+    fun fetchChords(url: String, findBest: Boolean) {
         viewModelScope.launch {
-            allSources.forEach {
-                when(val data = it.fetchSongByUrl(url,)) {
-                    is Chords -> {
-                        chords.emit(data)
-                        return@launch
-                    }
-                }
+            if(findBest) {
+                repo.fetchBestVersionFromUrl(url)
+            } else {
+                repo.fetchChordsFromUrl(url)
             }
         }
+
     }
 }

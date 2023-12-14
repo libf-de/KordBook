@@ -3,6 +3,7 @@ package de.libf.kordbook.ui.viewmodel
 import de.libf.kordbook.data.model.ChordOrigin
 import de.libf.kordbook.data.model.LocalChordOrigin
 import de.libf.kordbook.data.model.SearchResult
+import de.libf.kordbook.data.repository.ChordsRepository
 import de.libf.kordbook.data.sources.remote.UltimateGuitarApiFetcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -17,9 +18,37 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 class ChordListViewModel : ViewModel(), KoinComponent {
-    val localStore: LocalChordOrigin by inject()
-    val ugStore: UltimateGuitarApiFetcher by inject()
-    val allSources = listOf(localStore, ugStore)
+    private val repo: ChordsRepository by inject()
+
+    val chordList = repo.chordList
+    val searchSuggestions = repo.searchSuggestions
+    val listLoading = repo.listLoading
+
+    fun onSearchResultSelected(searchResult: SearchResult, findBestVersion: Boolean) {
+        viewModelScope.launch {
+            if(findBestVersion) {
+                repo.fetchBestVersionFromUrl(searchResult.url)
+            } else {
+                repo.fetchChordsFromUrl(searchResult.url)
+            }
+        }
+    }
+
+    fun updateSearchSuggestions(query: String) {
+        viewModelScope.launch {
+            repo.getSearchSuggestions(query)
+        }
+    }
+
+    fun setSearchQuery(query: String) {
+        viewModelScope.launch {
+            repo.searchChordsList(query)
+        }
+    }
+
+
+
+    /*
 
     var searchQuery = MutableStateFlow("")
 
@@ -46,6 +75,6 @@ class ChordListViewModel : ViewModel(), KoinComponent {
         viewModelScope.launch {
             localStore.getAllChordsFlow()
         }
-    }
+    }*/
 
 }

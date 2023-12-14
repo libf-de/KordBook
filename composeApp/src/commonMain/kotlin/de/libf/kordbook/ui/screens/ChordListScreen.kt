@@ -4,10 +4,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
@@ -49,7 +51,10 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.libf.kordbook.data.model.SearchResult
 import de.libf.kordbook.ui.components.ChordItem
+import de.libf.kordbook.ui.components.ChordList
+import de.libf.kordbook.ui.components.ChordsFontFamily
 import de.libf.kordbook.ui.viewmodel.ChordListViewModel
 import io.ktor.util.encodeBase64
 import kotlinx.coroutines.delay
@@ -61,13 +66,30 @@ import org.koin.compose.koinInject
 @Composable
 fun ChordListScreen(
     navigator: Navigator,
+    chordFontFamily: ChordsFontFamily,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: ChordListViewModel = koinInject()
+    val chordList by viewModel.chordList.collectAsStateWithLifecycle()
+    val searchSuggestions by viewModel.searchSuggestions.collectAsStateWithLifecycle()
+    val listLoading by viewModel.listLoading.collectAsStateWithLifecycle()
+
+    ChordList(
+        modifier = Modifier.fillMaxSize(),
+        chordList = chordList,
+        fontFamily = chordFontFamily,
+        onChordSelected = { selected: SearchResult, findBest: Boolean ->
+            navigator.navigate("/chords/${findBest}/${selected.url.encodeBase64()}")
+        },
+        onQueryChanged = viewModel::updateSearchSuggestions,
+        suggestions = searchSuggestions,
+        onSearch = { viewModel.setSearchQuery(it); true },
+        isLoading = listLoading
+    )
 
 
 
-    var searchText by remember { mutableStateOf("") }
+    /*var searchText by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
     //val items = listOf("Item 1", "Item 2", "Item 3") // Ersetzen Sie dies durch Ihre Item-Liste
     //val filteredItems = if (searchText.isEmpty()) items else items.filter { it.contains(searchText, true) }
@@ -129,7 +151,7 @@ fun ChordListScreen(
                 }
             }
         }
-    }
+    }*/
 }
 
 

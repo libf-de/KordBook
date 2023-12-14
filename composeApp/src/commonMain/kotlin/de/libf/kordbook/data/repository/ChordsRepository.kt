@@ -14,10 +14,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flatMapConcat
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flatMapMerge
-import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.datetime.Clock
@@ -25,9 +22,9 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 class ChordsRepository : KoinComponent {
-    val localSrc: LocalChordOrigin by inject()
-    val ugSrc: UltimateGuitarApiFetcher by inject()
-    val allSources = listOf(localSrc, ugSrc)
+    private val localSrc: LocalChordOrigin by inject()
+    private val ugSrc: UltimateGuitarApiFetcher by inject()
+    private val allSources = listOf(localSrc, ugSrc)
 
     val chordsToDisplay = MutableStateFlow(Chords.EMPTY)
     val chordList = MutableStateFlow<Map<ChordOrigin, List<SearchResult>>>(emptyMap())
@@ -38,7 +35,7 @@ class ChordsRepository : KoinComponent {
     val searchSuggestions = MutableStateFlow(emptyList<SearchResult>())
     val listLoading = MutableStateFlow(false)
 
-    var suggestionJobs: MutableList<Job> = mutableListOf()
+    private var suggestionJobs: MutableList<Job> = mutableListOf()
 
     init {
         CoroutineScope(Dispatchers.IO).launch {
@@ -100,7 +97,7 @@ class ChordsRepository : KoinComponent {
         allSources.forEach {
             CoroutineScope(Dispatchers.IO).launch {
                 val start = Clock.System.now().toEpochMilliseconds()
-                println("Started fetching from ${it.NAME} at ${start}")
+                println("Started fetching from ${it.NAME} at $start")
                 val result = it.searchSongs(query)
                 println("${it.NAME} got result in ${Clock.System.now().toEpochMilliseconds() - start}ms")
                 mapMutex.lock()

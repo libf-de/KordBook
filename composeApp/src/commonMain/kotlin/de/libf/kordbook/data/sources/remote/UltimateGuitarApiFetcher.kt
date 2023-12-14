@@ -16,8 +16,6 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.http.encodeURLParameter
 import io.ktor.serialization.kotlinx.json.json
-import io.realm.kotlin.ext.realmListOf
-import io.realm.kotlin.ext.toRealmList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.datetime.Clock
@@ -159,7 +157,7 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
                         votes = it.votes?.toDouble(),
                         capo = null,
                         chords = null,
-                        related = realmListOf(),
+                        related = listOf(),
                         url = "UG::${it.id}",
                         origin = NAME
                     )
@@ -177,7 +175,7 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
                         votes = it.votes?.toDouble(),
                         capo = null,
                         chords = null,
-                        related = realmListOf(),
+                        related = listOf(),
                         url = "UG::${it.id}",
                         origin = NAME
                     )

@@ -10,7 +10,6 @@ import de.libf.kordbook.data.tools.Md5
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
-import platformModule
 
 class KoinApplication : Application() {
 

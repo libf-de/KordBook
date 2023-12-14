@@ -1,9 +1,7 @@
 package de.libf.kordbook.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -25,10 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ElevatedCard
@@ -47,13 +42,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.libf.kordbook.data.model.ChordOrigin
@@ -62,6 +54,7 @@ import de.libf.kordbook.data.model.ResultType
 import de.libf.kordbook.data.model.SearchResult
 import de.libf.kordbook.res.MR
 import de.libf.kordbook.ui.components.ChordItem
+import de.libf.kordbook.ui.components.ChordList
 import de.libf.kordbook.ui.components.ChordProViewer
 import de.libf.kordbook.ui.components.ChordsFontFamily
 import de.libf.kordbook.ui.components.RelatedItem
@@ -74,14 +67,12 @@ import dev.icerock.moko.resources.compose.painterResource
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import moe.tlaster.precompose.flow.collectAsStateWithLifecycle
-import moe.tlaster.precompose.navigation.Navigator
 import org.koin.compose.koinInject
 import kotlin.math.max
 
 
 @Composable
 fun DesktopChordScreen(
-    navigator: Navigator,
     modifier: Modifier = Modifier,
 ) {
     val viewModel = koinInject<DesktopScreenViewModel>()
@@ -101,18 +92,16 @@ fun DesktopChordScreen(
 
     //val chordList by viewModel.chordList.collectAsStateWithLifecycle(emptyMap())
     val chordList by viewModel.chordList.collectAsStateWithLifecycle()
-    val chords by viewModel.chordsToDisplay.collectAsStateWithLifecycle()
-    val chordsLoaded by viewModel.chordsLoaded.collectAsStateWithLifecycle()
-    val chordsSaved by viewModel.displayedChordsSaved.collectAsStateWithLifecycle(false)
     val searchSuggestions by viewModel.searchSuggestions.collectAsStateWithLifecycle()
     val listLoading by viewModel.listLoading.collectAsStateWithLifecycle()
+
+    val chords by viewModel.chordsToDisplay.collectAsStateWithLifecycle()
+    val chordsSaved by viewModel.displayedChordsSaved.collectAsStateWithLifecycle(false)
 
     val autoScrollEnabled = remember { mutableStateOf(true) }
     val autoScrollSpeed = remember { mutableStateOf(0f) }
     val transposing = remember { mutableStateOf(0) }
     val fontSizeSp = remember { mutableStateOf(16) }
-
-    val alpha: Float by animateFloatAsState(if (true) 1f else 0f)
 
     LaunchedEffect(chordsSaved) {
         println("Chords saved changed to $chordsSaved")
@@ -146,7 +135,6 @@ fun DesktopChordScreen(
                 fontSize = fontSizeSp.value,
                 fontFamily = chordFontFamily,
                 modifier = Modifier
-                    .alpha(alpha)
                     .padding(horizontal = 24.dp)
                     .fillMaxSize(),
             )
@@ -157,7 +145,7 @@ fun DesktopChordScreen(
                 scrollEnabled = autoScrollEnabled,
                 scrollSpeed = autoScrollSpeed,
                 transposing = transposing,
-                modifier = Modifier.alpha(alpha).width(sidebarWidth).fillMaxHeight().align(Alignment.TopEnd),
+                modifier = Modifier.width(sidebarWidth).fillMaxHeight().align(Alignment.TopEnd),
                 onChordSelected = viewModel::onSearchResultSelected,
                 onSaveChordsClicked = {
                     if (chordsSaved) {
@@ -179,118 +167,7 @@ fun DesktopChordScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ChordList(
-    modifier: Modifier,
-    chordList: Map<ChordOrigin, List<SearchResult>>,
-    onChordSelected: (selected: SearchResult, fromSearch: Boolean) -> Unit,
-    onSearch: (String) -> Boolean,
-    onQueryChanged: (String) -> Unit,
-    isLoading: Boolean,
-    suggestions: List<SearchResult> = emptyList(),
-    fontFamily: ChordsFontFamily = ChordsFontFamily.default,
-) {
-    var query by remember { mutableStateOf("") }
-    var searchActive by remember { mutableStateOf(false) }
-    val searchPadding: Int by animateIntAsState(if (searchActive) 0 else 12)
 
-
-    LaunchedEffect(key1 = query) {
-        delay(200)
-        onQueryChanged(query)
-    }
-
-    Column(modifier = modifier) {
-        SearchBar(
-            query = query,
-            onQueryChange = { query = it;  },
-            active = searchActive,
-            onActiveChange = { searchActive = it },
-            onSearch = { if (onSearch(it)) searchActive = false },
-            modifier = Modifier.padding(horizontal = searchPadding.dp).fillMaxWidth(),
-            leadingIcon = {
-                if(!isLoading) {
-                    Icon(
-                        Icons.Rounded.Search,
-                        contentDescription = "Search",
-                    )
-                } else {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            },
-            trailingIcon = {
-                if(query.isNotBlank()) {
-                    IconButton(
-                        onClick = { query = "" },
-                        modifier = Modifier
-                    ) {
-                        Icon(
-                            Icons.Rounded.Clear,
-                            contentDescription = "Search",
-                        )
-                    }
-                }
-            }
-        ) {
-            LazyColumn {
-                items(suggestions) { suggestion ->
-                    if(suggestion.type == ResultType.SUGGESTION) {
-                        SuggestionItem(
-                            searchResult = suggestion,
-                            modifier = Modifier.clickable {
-                                query = suggestion.songName
-                                if(onSearch(query)) searchActive = false
-                            }
-                        )
-                    } else {
-                        ChordItem(
-                            searchResult = suggestion,
-                            modifier = Modifier.clickable {
-                                query = suggestion.songName
-                                if(onSearch(query)) searchActive = false
-
-                                if(suggestion.type == ResultType.RESULT) {
-                                    onChordSelected(suggestion, true)
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-        }
-        LazyColumn(modifier = Modifier) {
-            chordList.mapValues {
-                it.value.groupBy { it.songId }
-            }.forEach {
-                item {
-                    Column {
-                        Text("Provider: ${it.key.NAME}")
-                        Divider()
-                    }
-
-
-                }
-                items(it.value.values.toList()) { versionList ->
-                    val ratingSortedList = versionList.sortedBy { it.ratingVotesRatio() }.reversed()
-                    SongItem(
-                        ratingSortedList,
-                        onChordsSelected = { chords ->
-                            onChordSelected(
-                                chords,
-                                query.isNotEmpty()
-                            )
-                        },
-                        fontFamily = fontFamily
-                    )
-                }
-            }
-        }
-    }
-
-}
 
 @Composable
 fun ChordView(
@@ -315,7 +192,6 @@ fun ChordView(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChordViewSidebar(
     chords: Chords,
@@ -330,7 +206,7 @@ fun ChordViewSidebar(
     fontFamily: ChordsFontFamily = ChordsFontFamily.default,
 ) {
     var recommendedExpanded by remember { mutableStateOf(false) }
-    var versionsExpanded by remember { mutableStateOf(false) }
+    //var versionsExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxWidth().fillMaxHeight()) {
         ElevatedCard(
@@ -367,8 +243,6 @@ fun ChordViewSidebar(
                     }?.toString()?.length ?: 0
 
                     items(versionsList) { alternativeChord ->
-                        val mod: Modifier
-                        val fontWeight: FontWeight?
 
                         VersionItem(
                             searchResult = alternativeChord,
@@ -391,20 +265,20 @@ fun ChordViewSidebar(
                         ) {
                             Divider(modifier = Modifier.weight(1f).padding(end = 8.dp))
 
-                            Crossfade(versionsExpanded) {
+                            Crossfade(recommendedExpanded) {
                                 Icon(
                                     if(it) painterResource(MR.images.collapse) else painterResource(MR.images.expand),
                                     contentDescription = "Expand/collapse recommendations",
                                     modifier = Modifier
                                         .clickable {
-                                            versionsExpanded = !versionsExpanded
+                                            recommendedExpanded = !recommendedExpanded
                                         }.size(16.dp)
                                 )
                             }
                         }
                     }
 
-                    if(versionsExpanded) {
+                    if(recommendedExpanded) {
                         items(chords.related.toSearchResults()) {
                             RelatedItem(
                                 result = it,
