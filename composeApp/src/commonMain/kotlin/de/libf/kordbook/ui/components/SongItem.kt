@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
@@ -38,12 +39,11 @@ fun SongItem(
     Column(modifier = modifier) {
         Column(
             modifier = Modifier
-                .padding(top = 12.dp, start = 12.dp, end = 12.dp, bottom = 4.dp)
                 .clickable { onChordsSelected(mainVersion) }
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
+                modifier = Modifier.padding(top = 12.dp, start = 12.dp, end = 12.dp)
             ) {
                 Text(
                     text = mainVersion.songName,
@@ -65,6 +65,11 @@ fun SongItem(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(
+                    start = 12.dp,
+                    end = 12.dp,
+                    bottom = if(otherVersions.isEmpty()) 12.dp else 4.dp
+                )
             ) {
                 Text(
                     text = mainVersion.artist,
@@ -111,7 +116,7 @@ fun SongItem(
             )
         }
 
-        Divider()
+        //Spacer(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
     }
 }
 
@@ -125,26 +130,27 @@ fun VersionItem(
     selected: Boolean = false,
     fontFamily: ChordsFontFamily = ChordsFontFamily.default,
     modifier: Modifier = Modifier,
-    maxVotesPad: Int = 5
+    maxVotesPad: Int = 5,
+    isLarge: Boolean = false,
+    spaceOut: Boolean = true
 ) {
     Row(
-        modifier = modifier
+        modifier = if(isLarge) modifier.padding(8.dp) else modifier
     ) {
         VersionBox(
             text = "v${searchResult.version}",
-            /*fontFamily = fontFamily.text,*/
-            style = MaterialTheme.typography.bodySmall,
+            style = if(isLarge) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,
             fontWeight = if(selected) FontWeight.Bold else null,
             modifier = Modifier
         )
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = if(spaceOut) Modifier.weight(1f) else Modifier.width(8.dp))
 
         RatingBar(
             value = searchResult.rating?.toFloat() ?: 0f,
             stepSize = StepSize.HALF,
             style = RatingBarStyle.Stroke(),
-            size = 16.dp,
+            size = if(isLarge) 24.dp else 16.dp,
             spaceBetween = 2.dp,
             isIndicator = true,
             onValueChange = {},
@@ -156,7 +162,7 @@ fun VersionItem(
         val padLength = max(maxVotesPad-votes.length, 0)
         Text(
             text = "($votes)${" ".repeat(padLength)}",
-            style = MaterialTheme.typography.bodySmall,
+            style = if(isLarge) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,
             fontFamily = fontFamily.text,
             modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
         )

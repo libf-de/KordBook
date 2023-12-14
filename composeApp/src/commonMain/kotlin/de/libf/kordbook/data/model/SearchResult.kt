@@ -17,7 +17,7 @@ data class SearchResult(
     val origin: String,
     val type: ResultType = ResultType.RESULT,
 ) {
-    fun ratingVotesRatio(): Double? {
+    fun ratingVotesProduct(): Double? {
         return (this.votes?.let { it1 ->
             this.rating?.times(
                 it1

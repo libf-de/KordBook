@@ -20,6 +20,7 @@ import dev.icerock.moko.resources.compose.fontFamilyResource
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
 import io.ktor.util.decodeBase64String
+import moe.tlaster.precompose.PreComposeApp
 import moe.tlaster.precompose.navigation.NavHost
 import moe.tlaster.precompose.navigation.path
 import moe.tlaster.precompose.navigation.rememberNavigator
@@ -30,7 +31,6 @@ import org.koin.dsl.module
 
 val commonModule = module {
     singleOf(::ChordListViewModel)
-    //singleOf(::RealmDataStore)
     single<LocalChordOrigin> { SqlDataStore() }
     singleOf(::ChordsRepository)
     singleOf(::UltimateGuitarApiFetcher)
@@ -58,8 +58,10 @@ fun BaseApp(mainComposable: @Composable () -> Unit) {
     Napier.base(DebugAntilog())
 
     KoinContext {
-        AppTheme {
-            mainComposable()
+        PreComposeApp {
+            AppTheme {
+                mainComposable()
+            }
         }
     }
 }
@@ -79,9 +81,7 @@ fun DefaultComposable() {
         subtitle = fontFamilyResource(MR.fonts.MartianMono.medium),
     )
 
-    Scaffold { paddingValues ->
-        val bottomPadding = remember { paddingValues.calculateBottomPadding() }
-
+    Scaffold { _ ->
         NavHost(
             navigator = navigator,
             navTransition = NavTransition(),
@@ -116,6 +116,7 @@ fun DefaultComposable() {
                 ChordsScreen(
                     url = url ?: "",
                     findBest = best,
+                    chordFontFamily = fontFamily,
                     navigator = navigator
                 )
             }

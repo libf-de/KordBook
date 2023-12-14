@@ -2,10 +2,8 @@ package de.libf.kordbook.ui.screens
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,19 +17,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Clear
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SearchBar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,33 +31,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.libf.kordbook.data.model.ChordOrigin
 import de.libf.kordbook.data.model.Chords
-import de.libf.kordbook.data.model.ResultType
 import de.libf.kordbook.data.model.SearchResult
+import de.libf.kordbook.data.model.toSearchResults
 import de.libf.kordbook.res.MR
-import de.libf.kordbook.ui.components.ChordItem
+import de.libf.kordbook.ui.components.AutoScrollControl
 import de.libf.kordbook.ui.components.ChordList
 import de.libf.kordbook.ui.components.ChordProViewer
 import de.libf.kordbook.ui.components.ChordsFontFamily
+import de.libf.kordbook.ui.components.FavoriteControl
+import de.libf.kordbook.ui.components.FontSizeControl
 import de.libf.kordbook.ui.components.RelatedItem
-import de.libf.kordbook.ui.components.SongItem
-import de.libf.kordbook.ui.components.SuggestionItem
+import de.libf.kordbook.ui.components.TransposeControls
 import de.libf.kordbook.ui.components.VersionItem
 import de.libf.kordbook.ui.viewmodel.DesktopScreenViewModel
 import dev.icerock.moko.resources.compose.fontFamilyResource
 import dev.icerock.moko.resources.compose.painterResource
-import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import moe.tlaster.precompose.flow.collectAsStateWithLifecycle
 import org.koin.compose.koinInject
-import kotlin.math.max
 
 
 @Composable
@@ -158,12 +142,6 @@ fun DesktopChordScreen(
                 currentChordsSaved = chordsSaved
             )
         }
-
-
-
-
-
-
     }
 }
 
@@ -321,24 +299,10 @@ private fun SidebarControls(
                     modifier = Modifier.weight(1f),
                 )
 
-                Crossfade(targetState = currentChordsSaved) { saved ->
-                    IconButton(
-                        onClick = {
-                            onSaveChordsClicked()
-                        },
-                        modifier = Modifier
-                    ) {
-                        Icon(
-                            imageVector = if (saved) Icons.Rounded.Favorite
-                            else Icons.Rounded.FavoriteBorder,
-                            contentDescription = "List",
-                            modifier = Modifier.clickable {
-                                onSaveChordsClicked()
-                            }
-                        )
-                    }
-
-                }
+                FavoriteControl(
+                    currentChordsSaved = currentChordsSaved,
+                    onSaveChordsClicked = onSaveChordsClicked
+                )
             }
         }
 
@@ -352,23 +316,7 @@ private fun SidebarControls(
                 modifier = Modifier.weight(1f)
             )
 
-            IconButton(onClick = { fontSize.value += 2 }) {
-                Icon(
-                    painterResource(MR.images.font_larger),
-                    contentDescription = "List"
-                )
-            }
-            Text(
-                text = fontSize.value.toString(),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.width(36.dp)
-            )
-            IconButton(onClick = { fontSize.value -= 2 }) {
-                Icon(
-                    painterResource(MR.images.font_smaller),
-                    contentDescription = "List"
-                )
-            }
+            FontSizeControl(fontSize = fontSize)
         }
 
         Row(
@@ -399,48 +347,11 @@ private fun SidebarControls(
             }
 
 
-            IconButton(onClick = { scrollSpeed.value += 0.1f; scrollEnabled.value = true }) {
-                Icon(
-                    painterResource(MR.images.faster),
-                    contentDescription = "List"
-                )
-            }
-
-            Row(
-                modifier = Modifier.height(40.dp).combinedClickable(
-                    onClick = {
-
-                    },
-                    onLongClick = {
-                        scrollSpeed.value = if(scrollSpeed.value > 0f) 0f else 1f
-                    }
-                ).pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            if (event.type == PointerEventType.Scroll) {
-                                scrollSpeed.value = max(0f,
-                                    scrollSpeed.value - (event.changes.first().scrollDelta.y * 0.5f))
-                            }
-                            scrollEnabled.value = true
-                        }
-                    }
-                },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = scrollSpeed.value.toSingleDecimalString(),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.width(36.dp)
-                )
-            }
-
-            IconButton(onClick = { if(scrollSpeed.value > 0) scrollSpeed.value -= 0.1f; scrollEnabled.value = true }) {
-                Icon(
-                    painterResource(MR.images.slower),
-                    contentDescription = "List"
-                )
-            }
+            AutoScrollControl(
+                scrollSpeed = scrollSpeed,
+                scrollEnabled = scrollEnabled,
+                modifier = Modifier
+            )
         }
 
         Row(
@@ -452,40 +363,7 @@ private fun SidebarControls(
                 modifier = Modifier.weight(1f)
             )
 
-            IconButton(onClick = { transposing.value++ }) {
-                Icon(
-                    painterResource(MR.images.transpose_up),
-                    contentDescription = "List"
-                )
-            }
-            Text(
-                text = transposing.value.toTransposedString(),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.width(36.dp)
-            )
-            IconButton(onClick = { transposing.value-- }) {
-                Icon(
-                    painterResource(MR.images.transpose_down),
-                    contentDescription = "List"
-                )
-            }
+            TransposeControls(transposing = transposing)
         }
-    }
-}
-
-private fun List<Chords>.toSearchResults(): List<SearchResult> {
-    return this.map {
-        SearchResult(
-            id = it.id,
-            songName = it.songName,
-            songId = it.songId,
-            artist = it.artist,
-            artistId = it.artistId,
-            version = it.version,
-            rating = it.rating,
-            votes = it.votes,
-            url = it.url,
-            origin = it.origin,
-        )
     }
 }

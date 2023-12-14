@@ -31,6 +31,47 @@ import de.libf.kordbook.data.model.ResultType
 import de.libf.kordbook.data.model.SearchResult
 import kotlinx.coroutines.delay
 
+@Composable
+private fun LoadingStateIcon(isLoading: Boolean) {
+    if(!isLoading) {
+        Icon(
+            Icons.Rounded.Search,
+            contentDescription = "Search",
+        )
+    } else {
+        CircularProgressIndicator(
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+@Composable
+private fun SearchSuggestedItem(
+    suggestion: SearchResult,
+    onSearch: (String) -> Unit,
+    onChordSelected: (selected: SearchResult, fromSearch: Boolean) -> Unit
+) {
+    if(suggestion.type == ResultType.SUGGESTION) {
+        SuggestionItem(
+            searchResult = suggestion,
+            modifier = Modifier.clickable {
+                onSearch(suggestion.songName)
+            }
+        )
+    } else {
+        ChordItem(
+            searchResult = suggestion,
+            modifier = Modifier.clickable {
+                onSearch(suggestion.songName)
+
+                if(suggestion.type == ResultType.RESULT) {
+                    onChordSelected(suggestion, true)
+                }
+            }
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChordList(
@@ -62,16 +103,7 @@ fun ChordList(
             onSearch = { if (onSearch(it)) searchActive = false },
             modifier = Modifier.padding(horizontal = searchPadding.dp).fillMaxWidth(),
             leadingIcon = {
-                if(!isLoading) {
-                    Icon(
-                        Icons.Rounded.Search,
-                        contentDescription = "Search",
-                    )
-                } else {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+                LoadingStateIcon(isLoading)
             },
             trailingIcon = {
                 if(query.isNotBlank()) {
@@ -87,51 +119,43 @@ fun ChordList(
                 }
             }
         ) {
+            /** Search suggestions LazyColumn **/
             LazyColumn {
                 items(suggestions) { suggestion ->
-                    if(suggestion.type == ResultType.SUGGESTION) {
-                        SuggestionItem(
-                            searchResult = suggestion,
-                            modifier = Modifier.clickable {
-                                query = suggestion.songName
-                                if(onSearch(query)) searchActive = false
-                            }
-                        )
-                    } else {
-                        ChordItem(
-                            searchResult = suggestion,
-                            modifier = Modifier.clickable {
-                                query = suggestion.songName
-                                if(onSearch(query)) searchActive = false
-
-                                if(suggestion.type == ResultType.RESULT) {
-                                    onChordSelected(suggestion, true)
-                                }
-                            }
-                        )
-                    }
+                    SearchSuggestedItem(
+                        onSearch = {
+                            query = suggestion.songName
+                            if(onSearch(query)) searchActive = false
+                        },
+                        onChordSelected = onChordSelected,
+                        suggestion = suggestion
+                    )
                 }
             }
         }
+
+        /** (main) Search results LazyColumn **/
         LazyColumn(modifier = Modifier) {
             chordList.mapValues {
                 it.value.groupBy { itm -> itm.songId }
             }.forEach {
+                /** Chord origin header **/
                 item {
                     Column {
-                        Text("Provider: ${it.key.NAME}")
+                        Text("von ${it.key.NAME}")
                         Divider()
                     }
-
-
                 }
+
+                /** Chords from above origin **/
                 items(it.value.values.toList()) { versionList ->
+                    // Sort rating items by rating-votes-product
                     val ratingSortedList = versionList
-                        .sortedBy { itm -> itm.ratingVotesRatio() }
+                        .sortedBy { itm -> itm.ratingVotesProduct() }
                         .reversed()
 
                     SongItem(
-                        ratingSortedList,
+                        songList = ratingSortedList,
                         onChordsSelected = { chords ->
                             onChordSelected(
                                 chords,
@@ -140,6 +164,8 @@ fun ChordList(
                         },
                         fontFamily = fontFamily
                     )
+
+                    Divider()
                 }
             }
         }

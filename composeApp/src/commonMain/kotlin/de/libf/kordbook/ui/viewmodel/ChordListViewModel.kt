@@ -24,6 +24,12 @@ class ChordListViewModel : ViewModel(), KoinComponent {
     val searchSuggestions = repo.searchSuggestions
     val listLoading = repo.listLoading
 
+    init {
+        viewModelScope.launch {
+            repo.showLocalChordsList()
+        }
+    }
+
     fun onSearchResultSelected(searchResult: SearchResult, findBestVersion: Boolean) {
         viewModelScope.launch {
             if(findBestVersion) {

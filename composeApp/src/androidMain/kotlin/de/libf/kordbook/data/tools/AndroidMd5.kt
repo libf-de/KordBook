@@ -2,7 +2,6 @@ package de.libf.kordbook.data.tools
 
 import java.math.BigInteger
 import java.security.MessageDigest
-import java.security.NoSuchAlgorithmException
 
 
 class AndroidMd5 : Md5 {

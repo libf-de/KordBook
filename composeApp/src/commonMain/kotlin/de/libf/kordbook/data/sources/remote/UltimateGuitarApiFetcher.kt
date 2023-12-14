@@ -1,5 +1,6 @@
 package de.libf.kordbook.data.sources.remote
 
+import de.libf.kordbook.data.converter.UltimateGuitarConverter
 import de.libf.kordbook.data.model.ChordOrigin
 import de.libf.kordbook.data.model.Chords
 import de.libf.kordbook.data.model.ResultType
@@ -26,12 +27,13 @@ import kotlinx.serialization.json.Json
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-private fun <E> List<E>.append(function: () -> E): List<E> {
-    return this + function()
-}
-
+/**
+ * Fetches data from the Ultimate Guitar API.
+ *
+ * Implements the ChordOrigin interface and uses Koin for dependency injection.
+ */
 class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
-
+    /** ChordOrigin attributes **/
     companion object {
         const val NAME = "Ultimate Guitar"
         const val REMOTE_SOURCE = false
@@ -43,25 +45,37 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
     override val REMOTE_SOURCE: Boolean
         get() = Companion.REMOTE_SOURCE
 
-    val md5Tool by inject<Md5>()
+    /** Ktor-Client / API-"Authentication" related **/
+    private val md5Tool by inject<Md5>()
 
-    val CLIENT_ID = (1..16).map {
+    private val clientID = (1..16).map {
         (('a'..'f') + ('0'..'9')).random()
     }.joinToString("")
 
-    fun API_KEY(): String {
-        val CURRENT_DATE = Clock.System.now().toLocalDateTime(TimeZone.UTC)
-        return "${CLIENT_ID}${CURRENT_DATE.year}-" +
-                "${CURRENT_DATE.monthNumber.toTwoDigitString()}-" +
-                "${CURRENT_DATE.dayOfMonth.toTwoDigitString()}:" +
-                "${CURRENT_DATE.hour.toTwoDigitString()}createLog()"
+    /**
+     * Generates the API key.
+     *
+     * The API key is a combination of the client ID and the current date.
+     *
+     * @return The generated API key.
+     */
+    private fun apiKey(): String {
+        val currentDate = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+        return "${clientID}${currentDate.year}-" +
+                "${currentDate.monthNumber.toTwoDigitString()}-" +
+                "${currentDate.dayOfMonth.toTwoDigitString()}:" +
+                "${currentDate.hour.toTwoDigitString()}createLog()"
     }
 
-
-    protected val client = HttpClient {
+    /**
+     * The HTTP client used to make requests to the Ultimate Guitar API.
+     *
+     * The client includes several plugins for user agent, retrying requests, and content negotiation.
+     */
+    private val client = HttpClient {
         defaultRequest {
-            header("X-UG-CLIENT-ID", CLIENT_ID)
-            header("X-UG-API-KEY", md5Tool.fromString(API_KEY()))
+            header("X-UG-CLIENT-ID", clientID)
+            header("X-UG-API-KEY", md5Tool.fromString(apiKey()))
         }
 
         install(UserAgent) {
@@ -88,7 +102,7 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
         }
     }
 
-
+    /** JSON data classes **/
     @Serializable
     private data class UGSearch(
         val tabs: List<UGTab>
@@ -130,8 +144,13 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
         val recommended: List<UGTab>,
         val content: String
     ) {
+        /**
+         * Converts the tab data to a Chords object.
+         *
+         * @return The converted Chords object.
+         */
         fun toChords(): Chords {
-            val chordsContent = convertUGToChordPro(this.content)
+            val chordsContent = UltimateGuitarConverter.convertToChordPro(this.content)
             return Chords(
                 id = this.id.toString(),
                 songName = this.song_name,
@@ -184,137 +203,16 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
                 origin = NAME
             )
         }
-
-        private fun convertUGToChordPro(input: String): String {
-            println("converting from:")
-            println(input)
-            println("==========================================")
-
-            val CHORD_LINE_REGEX = Regex("^\\s*((([A-G]|N\\.?C\\.?)([#b])?([^/\\s-:]*)(/([A-G]|N\\.?C\\.?)([#b])?)?)(\\s|\$)+)+(\\s|\$)+")
-
-            val saneInput = input
-                .replace(Regex("(\\[[A-Z][A-Za-z0-9 ]+\\])\n\n", RegexOption.MULTILINE), "$1\n")
-
-            println("==========================================")
-            println("sane input:")
-            println(saneInput)
-
-            val lines = saneInput
-                .replace("\r", "")
-                .replace(Regex("(\\[[A-Z][A-Za-z0-9 ]+\\])\n\n", RegexOption.MULTILINE), "$1\n")
-                .replace("[tab]", "")
-                .replace("[/tab]", "")
-                .replace("[ch]", "")
-                .replace("[/ch]", "")
-                .split("\n")
-
-            //val outputLines = mutableListOf<String>()
-
-            val output = StringBuilder()
-
-            var isChordsLine = true
-            var contentStarted = true
-            //var nextChords = mutableListOf<Pair<Int, String>>()
-            var sectionSuffix = ""
-
-            val lineIt = lines.iterator()
-
-            while (lineIt.hasNext()) {
-                val line = lineIt.next()
-
-                // Check if current line is empty -> just add to output
-                if (line.isBlank()) {
-                    output.append("\n")
-                    continue
-                }
-
-                if(line.matches(Regex("^\\[.*\\]$"))) {
-                    // Verse regex
-                    val verseRegex = Regex("^\\[\\s*Verse(.*)?\\]$")
-                    val chorusRegex = Regex("^\\[\\s*Chorus(.*)?\\]$")
-                    val bridgeRegex = Regex("^\\[\\s*Bridge(.*)?\\]$")
-
-                    output.append(sectionSuffix)
-
-                    if(verseRegex.matches(line)) {
-                        val verseNumber = verseRegex.find(line)?.groups?.get(1)?.value?.trim()
-                        if(verseNumber?.isNotBlank() == true) {
-                            output.append("{start_of_verse: Verse ${verseNumber}}\n")
-                        } else {
-                            output.append("{start_of_verse}\n")
-                        }
-                        sectionSuffix = "{end_of_verse}\n"
-                    } else if(chorusRegex.matches(line)) {
-                        val chorusNumber = chorusRegex.find(line)?.groups?.get(1)?.value?.trim()
-                        if(chorusNumber?.isNotBlank() == true) {
-                            output.append("{start_of_chorus: Chorus ${chorusNumber}}\n")
-                        } else {
-                            output.append("{start_of_chorus}\n")
-                        }
-                        sectionSuffix = "{end_of_chorus}\n"
-                    } else if(bridgeRegex.matches(line)) {
-                        val bridgeNumber = bridgeRegex.find(line)?.groups?.get(1)?.value?.trim()
-                        if(bridgeNumber?.isNotBlank() == true) {
-                            output.append("{start_of_bridge: Bridge ${bridgeNumber}}\n")
-                        } else {
-                            output.append("{start_of_bridge}\n")
-                        }
-                        sectionSuffix = "{end_of_bridge}\n"
-                    } else {
-                        output.append("{highlight: ${line.trim().removePrefix("[").removeSuffix("]")}}\n")
-                        sectionSuffix = ""
-                    }
-                    continue
-                }
-
-                val notAChord = listOf("Interlude")
-
-                // Check if line matches CHORD_LINE_REGEX, there is a nextline and line contains no badwords
-                if (CHORD_LINE_REGEX.matches(line) &&
-                    lineIt.hasNext() &&
-                    notAChord.none { line.contains(it) }
-                    ) {
-                    var textLine = lineIt.next()
-
-                    var posOffset: Int = 0
-                    // Match everything that's not a whitespace
-                    Regex("\\S+").findAll(line).forEach {
-                        val chordToInsert = "[${it.value}]"
-
-                        val pos = it.range.first + posOffset
-
-                        textLine = if (pos < textLine.length) {
-                            textLine.substring(0, pos) + chordToInsert + textLine.substring(pos)
-                        } else {
-                            textLine + " ".repeat(pos - textLine.length) + chordToInsert
-                        }
-
-                        posOffset += chordToInsert.length
-                    }
-
-                    output.append(textLine).append("\n")
-
-                    if (textLine.isBlank()) output.append("\n")
-                } else {
-                    output.append(line).append("\n")
-                    if (line.isBlank()) output.append("\n")
-                }
-            }
-
-            // cleanup output
-            val cleanOutput = output.toString()
-                .replace(Regex("^(.+)(\\{end_of_[a-z]+\\})$"), "\n\n") /* Ensure {end_of_*} is on its own line */
-                .replace(Regex("\n(\\{end_of_[a-z]+\\})\n", RegexOption.MULTILINE), "$1\n") /* Ensure there is no newline before {end_of_*} */
-                .replace(Regex("^(.+)\\n(\\{[^\\n\\}e].+\\})", RegexOption.MULTILINE), "$1\n\n$2") /* Ensure there is a newline before {start_of_*} */
-
-            println("==========================================")
-            println("to:")
-            println(cleanOutput)
-
-            return cleanOutput
-        }
     }
 
+    /** Implementation **/
+
+    /**
+     * Fetches a song by its URL.
+     *
+     * @param url The URL of the song.
+     * @return The fetched Chords object, or null if the URL does not start with "UG::".
+     */
     override suspend fun fetchSongByUrl(url: String): Chords? {
         if(!url.startsWith("UG::")) return null
         val id = url.removePrefix("UG::")
@@ -327,13 +225,26 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
         return response.body<UGTabData>().toChords()
     }
 
+    /**
+     * Fetches a song by a search result.
+     *
+     * @param searchResult The search result.
+     * @return The fetched Chords object.
+     */
     override suspend fun fetchSongBySearchResult(searchResult: SearchResult): Chords? {
         return fetchSongByUrl(searchResult.url)
     }
 
+    /**
+     * Searches for songs.
+     *
+     * @param query The search query.
+     * @param page The page number.
+     * @return A list of search results.
+     */
     override suspend fun searchSongs(query: String, page: Int): List<SearchResult> {
-        var start = Clock.System.now().toEpochMilliseconds()
-        println("start running from ${NAME} at ${start}")
+        val start = Clock.System.now().toEpochMilliseconds()
+        Napier.d("start running from $NAME at $start")
         val response = client.get(
             "https://api.ultimate-guitar.com/api/v1/tab/search" +
                     "?title=${query.encodeURLParameter()}" +
@@ -342,9 +253,9 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
                     "&type[]=300" +
                     "&page=${page}")
 
-        println("client id = ${CLIENT_ID}, api key = ${API_KEY()}")
+        Napier.d("client id = ${clientID}, api key = ${apiKey()}")
 
-        println("got response from ${NAME} in ${Clock.System.now().toEpochMilliseconds() - start}ms")
+        Napier.d("got response from $NAME in ${Clock.System.now().toEpochMilliseconds() - start}ms")
 
         if (response.status.value !in 200..299) {
             if(response.status.value == 404) return emptyList()
@@ -355,7 +266,7 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
 
         val searchData: UGSearch = response.body()
 
-        println("parsed response from ${NAME} in ${Clock.System.now().toEpochMilliseconds() - start}ms")
+        Napier.d("parsed response from $NAME in ${Clock.System.now().toEpochMilliseconds() - start}ms")
 
         return searchData.tabs.filter {
             it.type == "Chords"
@@ -375,13 +286,25 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
         }
     }
 
+    /**
+     * Searches for songs, but returns a flow
+     *
+     * @param query The search query.
+     * @return A flow of search results pairs.
+     */
     override fun searchSongsFlow(query: String): Flow<Pair<ChordOrigin, List<SearchResult>>> = flow {
         if(query.isBlank()) return@flow
 
         emit(this@UltimateGuitarApiFetcher to searchSongs(query))
     }
 
-    suspend fun getSuggestions(query: String): List<SearchResult> {
+    /**
+     * Fetches search suggestions for the given query.
+     *
+     * @param query The search query.
+     * @return A list of suggestions as SearchResult.
+     */
+    private suspend fun getSuggestions(query: String): List<SearchResult> {
         val searchSuggestions = client.get("https://api.ultimate-guitar.com/api/v1/tab/suggestion?q=${query.encodeURLParameter()}")
         if (searchSuggestions.status.value !in 200..299) {
             if(searchSuggestions.status.value == 404) return emptyList()
@@ -408,12 +331,14 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
         }
     }
 
+    /**
+     * Fetches search suggestions and some results for the given query.
+     *
+     * @param query The search query.
+     * @return A list of suggestions as SearchResult.
+     */
     override suspend fun getSearchSuggestions(query: String): List<SearchResult> {
-        val result = searchSongs(query).take(3) + getSuggestions(query).take(5)
-
-        println("Got suggestions vom UG: " + result.map { it.songName }.joinToString(", "))
-
-        return result
+        return searchSongs(query).take(3) + getSuggestions(query).take(5)
     }
 }
 

@@ -1,6 +1,7 @@
 package de.libf.kordbook.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,22 +66,11 @@ fun ChordProViewer(
     isAutoScrollEnabled: Boolean = true,
     fontSize: Int = 16,
     fontFamily: ChordsFontFamily = ChordsFontFamily.default,
-    modifier: Modifier = Modifier,
-    onNewTopmostLine: (Int) -> Unit = {}
+    modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
     val lcstate = rememberLazyListState()
     val lines = (chords.chords ?: "").split("\n")
-    val firstVisibleItemIndex by remember {
-        derivedStateOf {
-            lcstate.firstVisibleItemIndex
-        }
-    }
-
-    LaunchedEffect(firstVisibleItemIndex) {
-        onNewTopmostLine(lines[firstVisibleItemIndex].length)
-        println("First visible item index changed to $firstVisibleItemIndex")
-    }
 
     LaunchedEffect(key1 = scrollSpeed, key2 = isAutoScrollEnabled) {
         if (isAutoScrollEnabled) {
@@ -107,7 +97,7 @@ fun ChordProViewer(
     ) {
         item {
             Text(
-                text = chords.artist ?: "",
+                text = chords.artist,
                 style = MaterialTheme.typography.headlineSmall,
                 fontFamily = fontFamily.subtitle,
                 modifier = Modifier.padding(top = 32.dp)
@@ -115,7 +105,7 @@ fun ChordProViewer(
         }
         item {
             Text(
-                text = chords.songName ?: "",
+                text = chords.songName,
                 style = MaterialTheme.typography.headlineLarge,
                 fontFamily = fontFamily.title,
                 modifier = Modifier.padding(top = 0.dp)
@@ -135,10 +125,15 @@ fun ChordProViewer(
             } else {
                 Row(
                     verticalAlignment = Alignment.Bottom,
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier
                 ) {
                     parseChordProLineMapping(line, transposeBy).forEach { (chord, text) ->
-                        Column {
+                        Column(
+                            (if(chord != null)
+                                Modifier.padding(top = 8.dp)
+                            else
+                                Modifier)
+                        ) {
                             if(chord != null) {
                                 ChordBox(
                                     chord = chord,
@@ -153,6 +148,8 @@ fun ChordProViewer(
                                 text = text,
                                 fontSize = fontSize.sp,
                                 fontFamily = fontFamily.text,
+                                softWrap = false,
+                                maxLines = 1,
                             )
                         }
                     }

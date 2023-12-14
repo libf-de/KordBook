@@ -1,5 +1,6 @@
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
@@ -33,7 +34,8 @@ fun main() = application {
     startKoin {
         modules(commonModule + desktopModule)
     }
-    PreComposeWindow(onCloseRequest = ::exitApplication) {
+
+    Window(onCloseRequest = ::exitApplication, title = "Kordbook") {
         BaseApp {
             DesktopChordScreen()
         }

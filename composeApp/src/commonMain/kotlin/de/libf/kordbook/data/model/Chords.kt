@@ -45,3 +45,20 @@ data class Chords(
         }) ?: 0.0
     }
 }
+
+fun List<Chords>.toSearchResults(): List<SearchResult> {
+    return this.map {
+        SearchResult(
+            id = it.id,
+            songName = it.songName,
+            songId = it.songId,
+            artist = it.artist,
+            artistId = it.artistId,
+            version = it.version,
+            rating = it.rating,
+            votes = it.votes,
+            url = it.url,
+            origin = it.origin,
+        )
+    }
+}
