@@ -17,9 +17,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -132,11 +136,14 @@ fun DesktopChordScreen(
                 modifier = Modifier.width(sidebarWidth).fillMaxHeight().align(Alignment.TopEnd),
                 onChordSelected = viewModel::onSearchResultSelected,
                 onSaveChordsClicked = {
-                    if (chordsSaved) {
+                    /*if (chordsSaved) {
                         viewModel.deleteChords(chords)
-                    } else {
+                    } else {*/
                         viewModel.saveChords(chords)
-                    }
+                    //}
+                },
+                onDeleteChordsClicked = {
+                    viewModel.deleteChords(chords)
                 },
                 fontFamily = chordFontFamily,
                 currentChordsSaved = chordsSaved
@@ -181,6 +188,7 @@ fun ChordViewSidebar(
     currentChordsSaved: Boolean?,
     onChordSelected: (SearchResult, Boolean) -> Unit = { _, _ -> },
     onSaveChordsClicked: () -> Unit = {},
+    onDeleteChordsClicked: () -> Unit = {},
     fontFamily: ChordsFontFamily = ChordsFontFamily.default,
 ) {
     var recommendedExpanded by remember { mutableStateOf(false) }
@@ -203,6 +211,7 @@ fun ChordViewSidebar(
                     transposing = transposing,
                     currentChordsSaved = currentChordsSaved,
                     onSaveChordsClicked = onSaveChordsClicked,
+                    onDeleteChordsClicked = onDeleteChordsClicked,
                 )
 
 
@@ -283,6 +292,7 @@ private fun SidebarControls(
     transposing: MutableState<Int>,
     currentChordsSaved: Boolean? = null,
     onSaveChordsClicked: () -> Unit = {},
+    onDeleteChordsClicked: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var lastAutoscrollClick by remember { mutableStateOf(0L) }
@@ -303,6 +313,16 @@ private fun SidebarControls(
                     currentChordsSaved = currentChordsSaved,
                     onSaveChordsClicked = onSaveChordsClicked
                 )
+
+                IconButton(
+                    onClick = onDeleteChordsClicked,
+                    modifier = Modifier
+                ) {
+                    Icon(
+                        Icons.Rounded.Delete,
+                        contentDescription = "Search",
+                    )
+                }
             }
         }
 
