@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.libf.kordbook.data.model.Chords
+import de.libf.kordbook.res.MR
+import dev.icerock.moko.resources.compose.fontFamilyResource
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -110,6 +112,15 @@ object UltimateGuitarViewer : ChordsViewerInterface {
                         }
                     }
                 }
+            }
+
+            item {
+                Text(
+                    text = "~ Ende ~",
+                    style = MaterialTheme.typography.displayMedium,
+                    fontFamily = fontFamilyResource(MR.fonts.Pacifico.regular),
+                    modifier = Modifier.padding(vertical = 32.dp)
+                )
             }
         }
     }
