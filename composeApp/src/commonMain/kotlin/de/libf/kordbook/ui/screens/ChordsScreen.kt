@@ -129,8 +129,7 @@ fun ChordsScreen(
             }
         )
 
-        ChordProViewer(
-            chords = wrappedChords,
+        chords.Viewer(
             transposeBy = transposing.value,
             isAutoScrollEnabled = autoScrollEnabled.value,
             scrollSpeed = autoScrollSpeed.value,

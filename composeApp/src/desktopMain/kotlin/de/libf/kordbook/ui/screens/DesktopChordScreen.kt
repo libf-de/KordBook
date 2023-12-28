@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
@@ -44,7 +43,6 @@ import de.libf.kordbook.data.model.toSearchResults
 import de.libf.kordbook.res.MR
 import de.libf.kordbook.ui.components.AutoScrollControl
 import de.libf.kordbook.ui.components.ChordList
-import de.libf.kordbook.ui.components.ChordProViewer
 import de.libf.kordbook.ui.components.ChordsFontFamily
 import de.libf.kordbook.ui.components.FavoriteControl
 import de.libf.kordbook.ui.components.FontSizeControl
@@ -165,8 +163,7 @@ fun ChordView(
     modifier: Modifier = Modifier,
 ) {
     Row(modifier = modifier) {
-        ChordProViewer(
-            chords = chords,
+        chords.Viewer(
             transposeBy = transposeBy,
             isAutoScrollEnabled = isAutoScrollEnabled,
             scrollSpeed = scrollSpeed,

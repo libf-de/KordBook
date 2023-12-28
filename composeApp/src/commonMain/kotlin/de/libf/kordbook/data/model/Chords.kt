@@ -1,5 +1,13 @@
 package de.libf.kordbook.data.model
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import de.libf.kordbook.ui.components.ChordProViewer
+import de.libf.kordbook.ui.components.ChordsFontFamily
+import de.libf.kordbook.ui.components.ChordsViewerInterface
+import de.libf.kordbook.ui.components.NullViewer
+import de.libf.kordbook.ui.components.UltimateGuitarViewer
+
 data class Chords(
     var url: String,
     var id: String,
@@ -16,6 +24,7 @@ data class Chords(
     var tonality: String? = null,
     var capo: String? = null,
     var chords: String? = null,
+    var format: ChordFormat/* = ChordFormat.CHORDPRO*/,
 ) {
     companion object {
         val EMPTY = Chords(
@@ -34,6 +43,7 @@ data class Chords(
             tonality = null,
             capo = null,
             chords = null,
+            format = ChordFormat.NULL,
         )
     }
 
@@ -44,6 +54,29 @@ data class Chords(
             )
         }) ?: 0.0
     }
+
+    @Composable
+    fun Viewer(
+        transposeBy: Int = 0,
+        scrollSpeed: Float = 1f,
+        isAutoScrollEnabled: Boolean = true,
+        fontSize: Int = 16,
+        fontFamily: ChordsFontFamily = ChordsFontFamily.default,
+        modifier: Modifier = Modifier
+    ) = this.format.viewer.ChordsViewer(
+        chords = this,
+        transposeBy = transposeBy,
+        scrollSpeed = scrollSpeed,
+        isAutoScrollEnabled = isAutoScrollEnabled,
+        fontSize = fontSize,
+        fontFamily = fontFamily,
+        modifier = modifier)
+}
+
+enum class ChordFormat(val viewer: ChordsViewerInterface) {
+    CHORDPRO(ChordProViewer),
+    UG(UltimateGuitarViewer),
+    NULL(NullViewer)
 }
 
 fun List<Chords>.toSearchResults(): List<SearchResult> {

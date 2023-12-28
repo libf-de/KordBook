@@ -1,5 +1,6 @@
 package de.libf.kordbook.data.sources.local
 
+import de.libf.kordbook.data.model.ChordFormat
 import de.libf.kordbook.data.model.ChordOrigin
 import de.libf.kordbook.data.model.Chords
 import de.libf.kordbook.data.model.LocalChordOrigin
@@ -162,6 +163,7 @@ private fun RealmChords.toChords(): Chords {
         tonality = this.tonality,
         capo = this.capo,
         chords = this.chords,
+        format = ChordFormat.NULL
     )
 
 }

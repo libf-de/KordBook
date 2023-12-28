@@ -6,6 +6,7 @@ import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.coroutines.mapToOneOrDefault
 import de.libf.kordbook.data.ChordsDatabase
 import de.libf.kordbook.data.DbChords
+import de.libf.kordbook.data.model.ChordFormat
 import de.libf.kordbook.data.model.ChordOrigin
 import de.libf.kordbook.data.model.Chords
 import de.libf.kordbook.data.model.LocalChordOrigin
@@ -54,7 +55,8 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
                 version = chords.version,
                 tonality = chords.tonality,
                 capo = chords.capo,
-                chords = chords.chords
+                chords = chords.chords,
+                format = chords.format
             )
 
             chords.versions.forEach {
@@ -73,7 +75,8 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
                     version = it.version,
                     tonality = it.tonality,
                     capo = it.capo,
-                    chords = it.chords
+                    chords = it.chords,
+                    format = it.format
                 )
             }
 
@@ -93,7 +96,8 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
                     version = it.version,
                     tonality = it.tonality,
                     capo = it.capo,
-                    chords = it.chords
+                    chords = it.chords,
+                    format = it.format
                 )
             }
         }
@@ -124,6 +128,16 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
                     databaseValue.split(",")
                 }
             override fun encode(value: List<String>) = value.joinToString(separator = ",")
+        }
+
+        val ChordFormatAdapter = object : ColumnAdapter<ChordFormat, Long> {
+            override fun decode(databaseValue: Long): ChordFormat {
+                return ChordFormat.entries[databaseValue.toInt()]
+            }
+
+            override fun encode(value: ChordFormat): Long {
+                return value.ordinal.toLong()
+            }
         }
     }
 
@@ -199,6 +213,7 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
                     version = relatedChord.version,
                     url = relatedChord.url,
                     origin = Companion.NAME,
+                    format = ChordFormat.NULL
                 )
             } else {
                 null
@@ -220,7 +235,8 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
                     votes = relatedChord.votes,
                     version = relatedChord.version,
                     url = relatedChord.url,
-                    origin = Companion.NAME
+                    origin = Companion.NAME,
+                    format = ChordFormat.NULL
                 )
             } else {
                 null
@@ -242,7 +258,8 @@ class SqlDataStore : LocalChordOrigin(), KoinComponent {
             version = this.version,
             tonality = this.tonality,
             capo = this.capo,
-            chords = this.chords
+            chords = this.chords,
+            format = this.format
         )
     }
 

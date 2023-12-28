@@ -1,6 +1,7 @@
 package de.libf.kordbook.data.sources.remote
 
 import de.libf.kordbook.data.converter.UltimateGuitarConverter
+import de.libf.kordbook.data.model.ChordFormat
 import de.libf.kordbook.data.model.ChordOrigin
 import de.libf.kordbook.data.model.Chords
 import de.libf.kordbook.data.model.ResultType
@@ -64,7 +65,7 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
         return "${clientID}${currentDate.year}-" +
                 "${currentDate.monthNumber.toTwoDigitString()}-" +
                 "${currentDate.dayOfMonth.toTwoDigitString()}:" +
-                "${currentDate.hour.toTwoDigitString()}createLog()"
+                "${currentDate.hour}createLog()"
     }
 
     /**
@@ -150,7 +151,7 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
          * @return The converted Chords object.
          */
         fun toChords(): Chords {
-            val chordsContent = UltimateGuitarConverter.convertToChordPro(this.content)
+            //val chordsContent = UltimateGuitarConverter.convertToChordPro(this.content)
             return Chords(
                 id = this.id.toString(),
                 songName = this.song_name,
@@ -160,7 +161,8 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
                 version = this.version.toString(),
                 tonality = this.tonality_name,
                 capo = this.capo.toString(),
-                chords = chordsContent,
+                chords = this.content,
+                format = ChordFormat.UG,
                 rating = this.rating,
                 votes = this.votes?.toDouble(),
                 versions = this.versions.map {
@@ -178,6 +180,7 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
                         chords = null,
                         related = listOf(),
                         url = "UG::${it.id}",
+                        format = ChordFormat.NULL,
                         origin = NAME
                     )
                 }.sortedBy { it.version?.toDoubleOrNull() },
@@ -196,6 +199,7 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
                         chords = null,
                         related = listOf(),
                         url = "UG::${it.id}",
+                        format = ChordFormat.NULL,
                         origin = NAME
                     )
                 },

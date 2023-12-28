@@ -3,6 +3,7 @@ package de.libf.kordbook.data.sources.remote
 import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.network.parseGetRequest
 import com.fleeksoft.ksoup.nodes.Document
+import de.libf.kordbook.data.model.ChordFormat
 import de.libf.kordbook.data.model.ChordOrigin
 import de.libf.kordbook.data.model.Chords
 import de.libf.kordbook.data.model.SearchResult
@@ -279,11 +280,13 @@ class UltimateGuitarFetcher : ChordOrigin {
                     chords = "",
                     related = realmListOf(),
                     url = it.tab_url,
-                    origin = this.NAME
+                    origin = this.NAME,
+                    format = ChordFormat.NULL
                 )
             }.toRealmList(),
             url = url,
-            origin = this.NAME
+            origin = this.NAME,
+            format = ChordFormat.UG
         )
     }
 

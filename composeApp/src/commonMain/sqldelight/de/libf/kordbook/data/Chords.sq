@@ -1,3 +1,4 @@
+import de.libf.kordbook.data.model.ChordFormat;
 import java.lang.Integer;
 import kotlin.String;
 import kotlin.collections.List;
@@ -17,7 +18,8 @@ CREATE TABLE DbChords (
     version TEXT,
     tonality TEXT,
     capo TEXT,
-    chords TEXT
+    chords TEXT,
+    format INTEGER AS ChordFormat NOT NULL
 );
 
 search:
@@ -36,11 +38,11 @@ selectVersionsById:
 SELECT id, songName, songId, artist, artistId, url, rating, votes, version FROM DbChords WHERE url = ?;
 
 insertChords:
-INSERT OR IGNORE INTO DbChords (url, songName, songId, artist, artistId, versions, related, id, origin, rating, votes, version, tonality, capo, chords)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR IGNORE INTO DbChords (url, songName, songId, artist, artistId, versions, related, id, origin, rating, votes, version, tonality, capo, chords, format)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateChords:
-UPDATE DbChords SET songName = ?, artist = ?, versions = ?, related = ?, id = ?, origin = ?, rating = ?, votes = ?, version = ?, tonality = ?, capo = ?, chords = ? WHERE url = ?;
+UPDATE DbChords SET songName = ?, artist = ?, versions = ?, related = ?, id = ?, origin = ?, rating = ?, votes = ?, version = ?, tonality = ?, capo = ?, chords = ?, format = ? WHERE url = ?;
 
 deleteChords:
 DELETE FROM DbChords WHERE url = ?;

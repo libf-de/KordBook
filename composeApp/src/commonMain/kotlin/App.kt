@@ -3,6 +3,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import app.cash.sqldelight.EnumColumnAdapter
 import com.example.compose.AppTheme
 import de.libf.kordbook.data.ChordsDatabase
 import de.libf.kordbook.data.DbChords
@@ -42,7 +43,8 @@ val commonModule = module {
             driver = get(),
             DbChordsAdapter = DbChords.Adapter(
                 relatedAdapter = SqlDataStore.ListOfStringsAdapter,
-                versionsAdapter = SqlDataStore.ListOfStringsAdapter
+                versionsAdapter = SqlDataStore.ListOfStringsAdapter,
+                formatAdapter = SqlDataStore.ChordFormatAdapter
             )
         )
     }
