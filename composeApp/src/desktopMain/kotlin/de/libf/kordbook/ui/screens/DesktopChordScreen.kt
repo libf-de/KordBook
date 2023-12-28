@@ -4,6 +4,9 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +19,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.Divider
@@ -31,15 +36,27 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.libf.kordbook.data.model.Chords
 import de.libf.kordbook.data.model.SearchResult
 import de.libf.kordbook.data.model.toSearchResults
+import de.libf.kordbook.data.tools.KeyEventDispatcher
 import de.libf.kordbook.res.MR
 import de.libf.kordbook.ui.components.AutoScrollControl
 import de.libf.kordbook.ui.components.ChordList
@@ -52,6 +69,9 @@ import de.libf.kordbook.ui.components.VersionItem
 import de.libf.kordbook.ui.viewmodel.DesktopScreenViewModel
 import dev.icerock.moko.resources.compose.fontFamilyResource
 import dev.icerock.moko.resources.compose.painterResource
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.datetime.Clock
 import moe.tlaster.precompose.flow.collectAsStateWithLifecycle
 import org.koin.compose.koinInject
@@ -59,6 +79,7 @@ import org.koin.compose.koinInject
 
 @Composable
 fun DesktopChordScreen(
+    keyEventDispatcher: KeyEventDispatcher,
     modifier: Modifier = Modifier,
 ) {
     val viewModel = koinInject<DesktopScreenViewModel>()
@@ -86,17 +107,106 @@ fun DesktopChordScreen(
 
     val autoScrollEnabled = remember { mutableStateOf(true) }
     val autoScrollSpeed = remember { mutableStateOf(0f) }
+    var fastScrollState by remember { mutableStateOf(0) }
+    var lastScrollSpeed by remember { mutableStateOf(1f) }
+
+    val lazyListState = rememberLazyListState()
     val transposing = remember { mutableStateOf(0) }
     val fontSizeSp = remember { mutableStateOf(16) }
+
+    val focusRequester = remember { FocusRequester() }
+    var hasFocus by remember { mutableStateOf(false) }
+
+    fun handleKeypress(it: KeyEvent): Boolean {
+        if(it.type == KeyEventType.KeyDown &&
+            it.key != Key.S && it.key != Key.DirectionDown &&
+            it.key != Key.W && it.key != Key.DirectionUp) return true
+
+        when(it.key) {
+            Key.Spacebar -> {
+                if(autoScrollSpeed.value != 0f) {
+                    lastScrollSpeed = autoScrollSpeed.value
+                    autoScrollSpeed.value = 0f
+                } else {
+                    autoScrollSpeed.value = lastScrollSpeed
+                }
+            }
+
+            Key.Plus -> {
+                autoScrollSpeed.value += 0.1f
+            }
+
+            Key.Minus -> {
+                autoScrollSpeed.value -= 0.1f
+            }
+
+            Key.U -> {
+                transposing.value += 1
+            }
+
+            Key.I -> {
+                transposing.value -= 1
+            }
+
+            Key.DirectionDown,
+            Key.S -> {
+                fastScrollState = (it.type == KeyEventType.KeyDown).toInt()
+            }
+
+            Key.DirectionUp,
+            Key.W -> {
+                fastScrollState = -(it.type == KeyEventType.KeyDown).toInt()
+            }
+
+            else -> { }
+        }
+        return true
+    }
 
     LaunchedEffect(chordsSaved) {
         println("Chords saved changed to $chordsSaved")
     }
 
+    LaunchedEffect(chords) {
+        autoScrollSpeed.value = 0f
+        transposing.value = 0
+        lazyListState.scrollToItem(0)
+    }
+
+    LaunchedEffect(fastScrollState) {
+        println("fastScrollState changed to $fastScrollState")
+        if(fastScrollState != 0) {
+            coroutineScope {
+                while(isActive) {
+                    lazyListState.scrollBy(30f * fastScrollState)
+                    delay(15)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(key1 = autoScrollSpeed.value, key2 = autoScrollEnabled.value) {
+        if (autoScrollEnabled.value) {
+            coroutineScope {
+                while (isActive) {
+                    delay(50)
+                    lazyListState.scrollBy(autoScrollSpeed.value)
+                }
+                //autoScrollSpeed.value = 0f
+            }
+        }
+    }
 
     // Two column layout
     Row(
-        modifier = modifier,
+        modifier = modifier
+            .fillMaxSize()
+            .focusRequester(focusRequester)
+            .onFocusChanged {
+                hasFocus = it.hasFocus
+            }
+            .focusable(true)
+            .onKeyEvent(::handleKeypress),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         ChordList(
@@ -115,8 +225,7 @@ fun DesktopChordScreen(
         Box {
             ChordView(
                 chords = chords,
-                isAutoScrollEnabled = autoScrollEnabled.value,
-                scrollSpeed = autoScrollSpeed.value,
+                lazyListState = lazyListState,
                 transposeBy = transposing.value,
                 fontSize = fontSizeSp.value,
                 fontFamily = chordFontFamily,
@@ -148,25 +257,32 @@ fun DesktopChordScreen(
             )
         }
     }
+
+    if (!hasFocus) {
+        LaunchedEffect(Unit) {
+            focusRequester.requestFocus()
+        }
+    }
 }
 
+private fun Boolean.toInt(): Int {
+    return if(this) 1 else 0
+}
 
 
 @Composable
 fun ChordView(
     chords: Chords,
+    lazyListState: LazyListState,
     fontFamily: ChordsFontFamily = ChordsFontFamily.default,
     transposeBy: Int = 0,
-    isAutoScrollEnabled: Boolean = false,
-    scrollSpeed: Float = 1f,
     fontSize: Int = 16,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier = modifier) {
         chords.Viewer(
+            lazyListState = lazyListState,
             transposeBy = transposeBy,
-            isAutoScrollEnabled = isAutoScrollEnabled,
-            scrollSpeed = scrollSpeed,
             fontSize = fontSize,
             fontFamily = fontFamily,
             modifier = Modifier.fillMaxWidth().fillMaxHeight(),

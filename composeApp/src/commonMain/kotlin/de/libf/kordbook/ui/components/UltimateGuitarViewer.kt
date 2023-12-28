@@ -1,14 +1,12 @@
 package de.libf.kordbook.ui.components
 
 import androidx.compose.foundation.gestures.scrollBy
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,41 +27,19 @@ object UltimateGuitarViewer : ChordsViewerInterface {
     override fun ChordsViewer(
         chords: Chords,
         transposeBy: Int,
-        scrollSpeed: Float,
-        isAutoScrollEnabled: Boolean,
+        lazyListState: LazyListState,
         fontSize: Int,
         fontFamily: ChordsFontFamily,
         modifier: Modifier
     ) {
-        val scrollState = rememberScrollState()
-        val lcstate = rememberLazyListState()
         val lines = (chords.chords ?: "")
             .replace("\r", "")
             .replace("[tab]", "")
             .replace("[/tab]", "")
             .split("\n")
 
-        println(chords.chords!!.replace("\r", "")
-            .replace("[tab]", "")
-            .replace("[/tab]", ""))
-
-        LaunchedEffect(key1 = scrollSpeed, key2 = isAutoScrollEnabled) {
-            if (isAutoScrollEnabled) {
-                coroutineScope {
-                    while (isActive) {
-                        delay(50)
-                        lcstate.scrollBy(scrollSpeed)
-                    }
-                }
-            }
-        }
-
-        LaunchedEffect(transposeBy) {
-            println("Transposing (Composable) changed to $transposeBy")
-        }
-
         LazyColumn(
-            state = lcstate,
+            state = lazyListState,
             modifier = modifier
         ) {
             item {

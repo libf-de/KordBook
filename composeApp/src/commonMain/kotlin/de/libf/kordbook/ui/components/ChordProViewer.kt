@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -26,8 +27,7 @@ object ChordProViewer : ChordsViewerInterface {
     override fun ChordsViewer(
         chords: Chords,
         transposeBy: Int,
-        scrollSpeed: Float,
-        isAutoScrollEnabled: Boolean,
+        lazyListState: LazyListState,
         fontSize: Int,
         fontFamily: ChordsFontFamily,
         modifier: Modifier
@@ -35,25 +35,6 @@ object ChordProViewer : ChordsViewerInterface {
         val scrollState = rememberScrollState()
         val lcstate = rememberLazyListState()
         val lines = (chords.chords ?: "").split("\n")
-
-        LaunchedEffect(key1 = scrollSpeed, key2 = isAutoScrollEnabled) {
-            if (isAutoScrollEnabled) {
-                coroutineScope {
-                    while (isActive) {
-                        delay(50) // Kleine Verzögerung für das kontinuierliche Scrollen
-                        //scrollState.scrollTo(scrollState.value + (scrollSpeed).toInt())
-                        lcstate.scrollBy(scrollSpeed)
-                    }
-                }
-            }
-        }
-
-        LaunchedEffect(transposeBy) {
-            println("Transposing (Composable) changed to $transposeBy")
-        }
-
-        // Get first visible item index from lazycolumn
-
 
         LazyColumn(
             state = lcstate,

@@ -1,5 +1,7 @@
 package de.libf.kordbook.data.model
 
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import de.libf.kordbook.ui.components.ChordProViewer
@@ -58,19 +60,24 @@ data class Chords(
     @Composable
     fun Viewer(
         transposeBy: Int = 0,
-        scrollSpeed: Float = 1f,
+        lazyListState: LazyListState = rememberLazyListState(),
+        /*scrollSpeed: Float = 1f,
         isAutoScrollEnabled: Boolean = true,
+        isFastScrollEnabled: Boolean = false,*/
         fontSize: Int = 16,
         fontFamily: ChordsFontFamily = ChordsFontFamily.default,
         modifier: Modifier = Modifier
     ) = this.format.viewer.ChordsViewer(
         chords = this,
         transposeBy = transposeBy,
-        scrollSpeed = scrollSpeed,
+        lazyListState = lazyListState,
+        /*scrollSpeed = scrollSpeed,
         isAutoScrollEnabled = isAutoScrollEnabled,
+        isFastScrollEnabled = isFastScrollEnabled,*/
         fontSize = fontSize,
         fontFamily = fontFamily,
-        modifier = modifier)
+        modifier = modifier
+    )
 }
 
 enum class ChordFormat(val viewer: ChordsViewerInterface) {

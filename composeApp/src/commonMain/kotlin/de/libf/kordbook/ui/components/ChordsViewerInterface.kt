@@ -3,6 +3,7 @@ package de.libf.kordbook.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,8 +24,7 @@ fun interface ChordsViewerInterface {
     @Composable
     fun ChordsViewer(chords: Chords,
                      transposeBy: Int,
-                     scrollSpeed: Float,
-                     isAutoScrollEnabled: Boolean,
+                     lazyListState: LazyListState,
                      fontSize: Int,
                      fontFamily: ChordsFontFamily,
                      modifier: Modifier
@@ -36,8 +36,7 @@ object NullViewer : ChordsViewerInterface {
     override fun ChordsViewer(
         chords: Chords,
         transposeBy: Int,
-        scrollSpeed: Float,
-        isAutoScrollEnabled: Boolean,
+        lazyListState: LazyListState,
         fontSize: Int,
         fontFamily: ChordsFontFamily,
         modifier: Modifier
