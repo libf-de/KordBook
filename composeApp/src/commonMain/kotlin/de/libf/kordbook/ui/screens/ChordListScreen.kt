@@ -58,6 +58,7 @@ import de.libf.kordbook.ui.components.ChordsFontFamily
 import de.libf.kordbook.ui.viewmodel.ChordListViewModel
 import io.ktor.util.encodeBase64
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.toList
 import moe.tlaster.precompose.flow.collectAsStateWithLifecycle
 import moe.tlaster.precompose.navigation.Navigator
 import org.koin.compose.koinInject
@@ -70,13 +71,15 @@ fun ChordListScreen(
     modifier: Modifier = Modifier,
 ) {
     val viewModel: ChordListViewModel = koinInject()
-    val chordList by viewModel.chordList.collectAsStateWithLifecycle()
+
+    val chordList = viewModel._chordList
+    //val chordList by viewModel.chordList.collectAsStateWithLifecycle()
     val searchSuggestions by viewModel.searchSuggestions.collectAsStateWithLifecycle()
     val listLoading by viewModel.listLoading.collectAsStateWithLifecycle()
 
     ChordList(
         modifier = Modifier.fillMaxSize(),
-        chordList = chordList,
+        chordList = chordList.map { "bla!" to it }.toMap(),
         fontFamily = chordFontFamily,
         onChordSelected = { selected: SearchResult, findBest: Boolean ->
             navigator.navigate("/chords/${findBest}/${selected.url.encodeBase64()}")

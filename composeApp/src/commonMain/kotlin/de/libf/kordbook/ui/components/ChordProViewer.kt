@@ -1,6 +1,5 @@
 package de.libf.kordbook.ui.components
 
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -12,20 +11,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.libf.kordbook.data.model.Chords
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
+import de.libf.kordbook.data.model.Song
 
-object ChordProViewer : ChordsViewerInterface {
+object ChordProViewer : SongViewerInterface {
     @Composable
-    override fun ChordsViewer(
-        chords: Chords,
+    override fun SongViewer(
+        chords: Song,
         transposeBy: Int,
         lazyListState: LazyListState,
         fontSize: Int,
@@ -34,7 +29,7 @@ object ChordProViewer : ChordsViewerInterface {
     ) {
         val scrollState = rememberScrollState()
         val lcstate = rememberLazyListState()
-        val lines = (chords.chords ?: "").split("\n")
+        val lines = (chords.content ?: "").split("\n")
 
         LazyColumn(
             state = lcstate,

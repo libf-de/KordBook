@@ -12,9 +12,8 @@ data class SearchResult(
     val version: String?,
     val rating: Double?,
     val votes: Double?,
-    val id: String,
     val url: String,
-    val origin: String,
+    val favorite: Boolean = false,
     val type: ResultType = ResultType.RESULT,
 ) {
     fun ratingVotesProduct(): Double? {

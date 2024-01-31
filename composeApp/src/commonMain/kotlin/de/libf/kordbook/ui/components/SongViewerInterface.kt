@@ -18,23 +18,24 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.libf.kordbook.data.model.Chords
+import de.libf.kordbook.data.model.Song
 
-fun interface ChordsViewerInterface {
+fun interface SongViewerInterface {
     @Composable
-    fun ChordsViewer(chords: Chords,
-                     transposeBy: Int,
-                     lazyListState: LazyListState,
-                     fontSize: Int,
-                     fontFamily: ChordsFontFamily,
-                     modifier: Modifier
+    fun SongViewer(
+        chords: Song,
+        transposeBy: Int,
+        lazyListState: LazyListState,
+        fontSize: Int,
+        fontFamily: ChordsFontFamily,
+        modifier: Modifier
     )
 }
 
-object NullViewer : ChordsViewerInterface {
+object NullViewer : SongViewerInterface {
     @Composable
-    override fun ChordsViewer(
-        chords: Chords,
+    override fun SongViewer(
+        chords: Song,
         transposeBy: Int,
         lazyListState: LazyListState,
         fontSize: Int,

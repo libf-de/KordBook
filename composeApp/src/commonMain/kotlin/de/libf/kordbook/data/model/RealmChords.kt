@@ -16,7 +16,6 @@ class RealmChords(
     var versions: RealmList<RealmChords> = realmListOf(),
     var related: RealmList<RealmChords>,
     var url: String,
-    var origin: String,
 
     @PrimaryKey
     var _id: ObjectId = ObjectId(),
@@ -27,5 +26,5 @@ class RealmChords(
     var capo: String? = null,
     var chords: String? = null,
 ) : RealmObject {
-    constructor() : this("", "", "", realmListOf(), realmListOf(), "", "")
+    constructor() : this("", "", "", realmListOf(), realmListOf(), "")
 }

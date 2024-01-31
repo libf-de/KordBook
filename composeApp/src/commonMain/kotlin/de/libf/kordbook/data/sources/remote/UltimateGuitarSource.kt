@@ -1,11 +1,11 @@
 package de.libf.kordbook.data.sources.remote
 
-import de.libf.kordbook.data.model.SongFormat
-import de.libf.kordbook.data.model.ChordOrigin
 import de.libf.kordbook.data.model.InstrumentType
+import de.libf.kordbook.data.model.SongFormat
 import de.libf.kordbook.data.model.ResultType
 import de.libf.kordbook.data.model.SearchResult
 import de.libf.kordbook.data.model.Song
+import de.libf.kordbook.data.sources.AbstractSource
 import de.libf.kordbook.data.tools.Md5
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
@@ -18,8 +18,6 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.http.encodeURLParameter
 import io.ktor.serialization.kotlinx.json.json
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -28,23 +26,7 @@ import kotlinx.serialization.json.Json
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-/**
- * Fetches data from the Ultimate Guitar API.
- *
- * Implements the ChordOrigin interface and uses Koin for dependency injection.
- */
-class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
-    /** ChordOrigin attributes **/
-    companion object {
-        const val NAME = "Ultimate Guitar"
-        const val REMOTE_SOURCE = false
-    }
-
-    override val NAME: String
-        get() = Companion.NAME
-
-    override val REMOTE_SOURCE: Boolean
-        get() = Companion.REMOTE_SOURCE
+class UltimateGuitarSource : AbstractSource(), KoinComponent {
 
     /** Ktor-Client / API-"Authentication" related **/
     private val md5Tool by inject<Md5>()
@@ -206,46 +188,8 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
         }
     }
 
-    /** Implementation **/
-
-    /**
-     * Fetches a song by its URL.
-     *
-     * @param url The URL of the song.
-     * @return The fetched Chords object, or null if the URL does not start with "UG::".
-     */
-    override suspend fun fetchSongByUrl(url: String): Song? {
-        if(!url.startsWith("UG::")) return null
-        val id = url.removePrefix("UG::")
-        val response = client.get("https://api.ultimate-guitar.com/api/v1/tab/info?tab_id=${id}&tab_access_type=private")
-        if (response.status.value !in 200..299) {
-            Napier.e { "Unexpected code: $response" }
-            throw Exception("Unexpected code: $response")
-        }
-
-        return response.body<UGTabData>().toSong()
-    }
-
-    /**
-     * Fetches a song by a search result.
-     *
-     * @param searchResult The search result.
-     * @return The fetched Chords object.
-     */
-    override suspend fun fetchSongBySearchResult(searchResult: SearchResult): Song? {
-        return fetchSongByUrl(searchResult.url)
-    }
-
-    /**
-     * Searches for songs.
-     *
-     * @param query The search query.
-     * @param page The page number.
-     * @return A list of search results.
-     */
-    override suspend fun searchSongs(query: String, page: Int): List<SearchResult> {
+    override suspend fun searchImpl(query: String, page: Int): List<SearchResult> {
         val start = Clock.System.now().toEpochMilliseconds()
-        Napier.d("start running from $NAME at $start")
         val response = client.get(
             "https://api.ultimate-guitar.com/api/v1/tab/search" +
                     "?title=${query.encodeURLParameter()}" +
@@ -256,7 +200,7 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
 
         Napier.d("client id = ${clientID}, api key = ${apiKey()}")
 
-        Napier.d("got response from $NAME in ${Clock.System.now().toEpochMilliseconds() - start}ms")
+        Napier.d("got response from UG in ${Clock.System.now().toEpochMilliseconds() - start}ms")
 
         if (response.status.value !in 200..299) {
             if(response.status.value == 404) return emptyList()
@@ -267,7 +211,7 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
 
         val searchData: UGSearch = response.body()
 
-        Napier.d("parsed response from $NAME in ${Clock.System.now().toEpochMilliseconds() - start}ms")
+        Napier.d("parsed response from UG in ${Clock.System.now().toEpochMilliseconds() - start}ms")
 
         return searchData.tabs.filter {
             it.type == "Chords"
@@ -280,21 +224,21 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
                 version = it.version.toString(),
                 rating = it.rating,
                 votes = it.votes?.toDouble(),
-                url = "UG::${it.id}",
+                url = "UG::${it.id}"
             )
         }
     }
 
-    /**
-     * Searches for songs, but returns a flow
-     *
-     * @param query The search query.
-     * @return A flow of search results pairs.
-     */
-    override fun searchSongsFlow(query: String): Flow<Pair<ChordOrigin, List<SearchResult>>> = flow {
-        if(query.isBlank()) return@flow
+    override suspend fun fetchSongByUrlImpl(url: String): Song? {
+        if(!url.startsWith("UG::")) return null
+        val id = url.removePrefix("UG::")
+        val response = client.get("https://api.ultimate-guitar.com/api/v1/tab/info?tab_id=${id}&tab_access_type=private")
+        if (response.status.value !in 200..299) {
+            Napier.e { "Unexpected code: $response" }
+            throw Exception("Unexpected code: $response")
+        }
 
-        emit(this@UltimateGuitarApiFetcher to searchSongs(query))
+        return response.body<UGTabData>().toSong()
     }
 
     /**
@@ -328,17 +272,8 @@ class UltimateGuitarApiFetcher : ChordOrigin, KoinComponent {
         }
     }
 
-    /**
-     * Fetches search suggestions and some results for the given query.
-     *
-     * @param query The search query.
-     * @return A list of suggestions as SearchResult.
-     */
-    override suspend fun getSearchSuggestions(query: String): List<SearchResult> {
-        return searchSongs(query).take(3) + getSuggestions(query).take(5)
+    override suspend fun getSearchSuggestionsImpl(query: String): List<SearchResult> {
+        return searchImpl(query, 1).take(3) + getSuggestions(query).take(5)
     }
-}
 
-fun Int.toTwoDigitString(): String {
-    return if(this < 10) "0${this}" else this.toString()
 }

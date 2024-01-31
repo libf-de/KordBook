@@ -1,26 +1,26 @@
 package de.libf.kordbook.ui.viewmodel
 
-import de.libf.kordbook.data.model.ChordOrigin
-import de.libf.kordbook.data.model.LocalChordOrigin
 import de.libf.kordbook.data.model.SearchResult
-import de.libf.kordbook.data.repository.ChordsRepository
-import de.libf.kordbook.data.sources.remote.UltimateGuitarApiFetcher
+import de.libf.kordbook.data.repository.SongsRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.flatMapConcat
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import moe.tlaster.precompose.viewmodel.ViewModel
 import moe.tlaster.precompose.viewmodel.viewModelScope
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ChordListViewModel : ViewModel(), KoinComponent {
-    private val repo: ChordsRepository by inject()
+    private val repo: SongsRepository by inject()
 
-    val chordList = repo.chordList
+    val chordList: MutableStateFlow<List<SearchResult>> = MutableStateFlow(emptyList())
+    val _chordList: MutableList<SearchResult> = mutableListOf()
+    //val chordList = repo.songList
     val searchSuggestions = repo.searchSuggestions
     val listLoading = repo.listLoading
 
@@ -28,6 +28,14 @@ class ChordListViewModel : ViewModel(), KoinComponent {
         viewModelScope.launch {
             repo.showLocalChordsList()
         }
+
+        viewModelScope.launch {
+            repo.songList.flatMapConcat {
+                it.asFlow()
+            }.toList(_chordList)
+        }
+
+
     }
 
     fun onSearchResultSelected(searchResult: SearchResult, findBestVersion: Boolean) {

@@ -17,7 +17,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import de.libf.kordbook.data.model.LocalChordOrigin
 import de.libf.kordbook.data.model.SearchResult
 
 @Composable
@@ -39,7 +38,7 @@ fun ChordItem(
                 modifier = Modifier.weight(1f)
             )
 
-            if(searchResult.origin == LocalChordOrigin.NAME) {
+            if(searchResult.favorite) {
                 RatingBar(
                     value = searchResult.rating?.toFloat() ?: 0f,
                     stepSize = StepSize.HALF,
@@ -78,7 +77,7 @@ fun ChordItem(
                 modifier = Modifier.weight(1f)
             )
 
-            if(searchResult.origin == LocalChordOrigin.NAME) {
+            if(searchResult.favorite) {
                 VersionBox(
                     text = "v${searchResult.version}",
                     style = MaterialTheme.typography.bodySmall,

@@ -4,48 +4,42 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import de.libf.kordbook.ui.components.ChordProViewer
 import de.libf.kordbook.ui.components.ChordsFontFamily
-import de.libf.kordbook.ui.components.ChordsViewerInterface
-import de.libf.kordbook.ui.components.NullViewer
-import de.libf.kordbook.ui.components.UltimateGuitarViewer
 
-data class Chords(
+data class Song(
     var url: String,
-    var id: String,
     var songName: String,
     var songId: String,
     var artist: String,
     var artistId: String,
-    var versions: List<Chords> = emptyList(),
-    var related: List<Chords> = emptyList(),
-    var origin: String,
+    var versions: List<Song> = emptyList(),
+    var related: List<Song> = emptyList(),
     var rating: Double? = null,
     var votes: Double? = null,
     var version: String? = null,
     var tonality: String? = null,
     var capo: String? = null,
-    var chords: String? = null,
-    var format: ChordFormat/* = ChordFormat.CHORDPRO*/,
+    var content: String? = null,
+    var format: SongFormat,
+    var instrument: InstrumentType
 ) {
     companion object {
-        val EMPTY = Chords(
+        val EMPTY = Song(
             url = "",
-            id = "",
             songName = "",
             songId = "",
             artist = "",
             artistId = "",
             versions = emptyList(),
             related = emptyList(),
-            origin = "",
             rating = null,
             votes = null,
             version = null,
             tonality = null,
             capo = null,
-            chords = null,
-            format = ChordFormat.NULL,
+            content = null,
+            format = SongFormat.NULL,
+            instrument = InstrumentType.UNDEFINED
         )
     }
 
@@ -67,7 +61,7 @@ data class Chords(
         fontSize: Int = 16,
         fontFamily: ChordsFontFamily = ChordsFontFamily.default,
         modifier: Modifier = Modifier
-    ) = this.format.viewer.ChordsViewer(
+    ) = this.format.viewer.SongViewer(
         chords = this,
         transposeBy = transposeBy,
         lazyListState = lazyListState,
@@ -80,16 +74,10 @@ data class Chords(
     )
 }
 
-enum class ChordFormat(val viewer: ChordsViewerInterface) {
-    CHORDPRO(ChordProViewer),
-    UG(UltimateGuitarViewer),
-    NULL(NullViewer)
-}
 
-fun List<Chords>.toSearchResults(): List<SearchResult> {
+fun List<Song>.toSearchResults(): List<SearchResult> {
     return this.map {
         SearchResult(
-            id = it.id,
             songName = it.songName,
             songId = it.songId,
             artist = it.artist,
@@ -98,7 +86,6 @@ fun List<Chords>.toSearchResults(): List<SearchResult> {
             rating = it.rating,
             votes = it.votes,
             url = it.url,
-            origin = it.origin,
         )
     }
 }

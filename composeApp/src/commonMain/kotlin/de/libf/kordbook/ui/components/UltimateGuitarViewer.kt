@@ -1,6 +1,5 @@
 package de.libf.kordbook.ui.components
 
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -10,31 +9,27 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.libf.kordbook.data.model.Chords
+import de.libf.kordbook.data.model.Song
 import de.libf.kordbook.res.MR
 import dev.icerock.moko.resources.compose.fontFamilyResource
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 
-object UltimateGuitarViewer : ChordsViewerInterface {
+object UltimateGuitarViewer : SongViewerInterface {
     //val DIRECTIVES = listOf("Chrous", "Verse", "Intro", "Bridge", "Outro", "Solo", "Interlude", "Instrumental", "Pre-Chorus", "Pre-Verse", "Post-Chorus", "Post-Verse", "Pre-Intro", "Post-Intro", "Pre-Bridge", "Post-Bridge", "Pre-Outro", "Post-Outro", "Pre-Solo", "Post-Solo", "Pre-Interlude", "Post-Interlude", "Pre-Instrumental", "Post-Instrumental", "Pre-Pre-Chorus", "Post-Post-Chorus", "Pre-Pre-Verse", "Post-Post-Verse", "Pre-Pre-Intro", "Post-Post-Intro", "Pre-Pre-Bridge", "Post-Post-Bridge", "Pre-Pre-Outro", "Post-Post-Outro", "Pre-Pre-Solo", "Post-Post-Solo", "Pre-Pre-Interlude", "Post-Post-Interlude", "Pre-Pre-Instrumental", "Post-Post-Instrumental", "Pre-Pre-Pre-Chorus", "Post-Post-Post-Chorus", "Pre-Pre-Pre-Verse", "Post-Post-Post-Verse", "Pre-Pre-Pre-Intro", "Post-Post-Post-Intro", "Pre-Pre-Pre-Bridge", "Post-Post-Post-Bridge", "Pre-Pre-Pre-Outro", "Post-Post-Post-Outro", "Pre-Pre-Pre-Solo", "Post-Post-Post-Solo", "Pre-Pre-Pre-Interlude", "Post-Post-Post-Interlude", "Pre-Pre-Pre-Instrumental", "Post-Post-Post-Instrumental")
 
     @Composable
-    override fun ChordsViewer(
-        chords: Chords,
+    override fun SongViewer(
+        chords: Song,
         transposeBy: Int,
         lazyListState: LazyListState,
         fontSize: Int,
         fontFamily: ChordsFontFamily,
         modifier: Modifier
     ) {
-        val lines = (chords.chords ?: "")
+        val lines = (chords.content ?: "")
             .replace("\r", "")
             .replace("[tab]", "")
             .replace("[/tab]", "")

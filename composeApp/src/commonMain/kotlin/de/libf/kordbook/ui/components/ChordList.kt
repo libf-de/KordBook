@@ -76,7 +76,7 @@ private fun SearchSuggestedItem(
 @Composable
 fun ChordList(
     modifier: Modifier,
-    chordList: Map<ChordOrigin, List<SearchResult>>,
+    chordList: Map<String, List<SearchResult>>,
     onChordSelected: (selected: SearchResult, fromSearch: Boolean) -> Unit,
     onSearch: (String) -> Boolean,
     onQueryChanged: (String) -> Unit,

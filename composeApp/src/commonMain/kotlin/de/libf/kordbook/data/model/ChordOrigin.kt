@@ -6,9 +6,9 @@ interface ChordOrigin {
     val NAME: String
     val REMOTE_SOURCE: Boolean
 
-    suspend fun fetchSongByUrl(url: String): Chords?
+    suspend fun fetchSongByUrl(url: String): Song?
 
-    suspend fun fetchSongBySearchResult(searchResult: SearchResult): Chords?
+    suspend fun fetchSongBySearchResult(searchResult: SearchResult): Song?
 
     suspend fun searchSongs(query: String, page: Int = 1): List<SearchResult>
 

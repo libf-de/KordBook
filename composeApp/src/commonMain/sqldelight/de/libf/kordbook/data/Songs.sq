@@ -1,0 +1,64 @@
+import de.libf.kordbook.data.model.InstrumentType;
+import de.libf.kordbook.data.model.SongFormat;
+import kotlin.Boolean;
+import kotlin.String;
+import kotlin.collections.List;
+
+CREATE TABLE DbSong (
+    url TEXT NOT NULL PRIMARY KEY,
+    songName TEXT NOT NULL,
+    songId TEXT NOT NULL,
+    artist TEXT NOT NULL,
+    artistId TEXT NOT NULL,
+    versions TEXT AS List<String> NOT NULL,
+    related TEXT AS List<String> NOT NULL,
+    rating REAL,
+    votes REAL,
+    version TEXT,
+    tonality TEXT,
+    capo TEXT,
+    content TEXT,
+    format INTEGER AS SongFormat NOT NULL,
+    instrument INTEGER AS InstrumentType NOT NULL,
+    favorite INTEGER AS Boolean NOT NULL DEFAULT 0
+);
+
+search:
+SELECT * FROM DbSong WHERE (instr(songName, :text) > 0 OR instr(artist, :text) > 0) AND favorite = 1;
+
+selectAllSongs:
+SELECT * FROM DbSong WHERE favorite = 1;
+
+selectSongByUrl:
+SELECT * FROM DbSong WHERE url = ?;
+
+setFavorite:
+UPDATE DbSong SET favorite = ? WHERE url = ?;
+
+toggleFavorite:
+UPDATE DbSong SET favorite = CASE WHEN favorite = 1 THEN 0 ELSE 1 END WHERE url = ?;
+
+getFavorite:
+SELECT favorite FROM DbSong WHERE url = ?;
+
+haveSongByUrl:
+SELECT EXISTS(SELECT 1 FROM DbSong WHERE url = ? AND content IS NOT NULL);
+
+selectVersionsByUrl:
+SELECT songName, songId, artist, artistId, url, rating, votes, version, instrument FROM DbSong WHERE url = ?;
+
+insertSong:
+INSERT OR IGNORE INTO DbSong (url, songName, songId, artist, artistId, versions, related, rating, votes, version, tonality, capo, content, instrument, format)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateSong:
+UPDATE DbSong SET songName = ?, artist = ?, versions = ?, related = ?, rating = ?, votes = ?, version = ?, tonality = ?, capo = ?, content = ?, format = ? WHERE url = ?;
+
+deleteSongByUrl:
+DELETE FROM DbSong WHERE url = ?;
+
+deleteAllSongs:
+DELETE FROM DbSong;
+
+clearCachedSongs:
+DELETE FROM DbSong WHERE favorite = 0;

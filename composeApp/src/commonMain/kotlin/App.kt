@@ -4,11 +4,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import com.example.compose.AppTheme
 import de.libf.kordbook.data.ChordsDatabase
-import de.libf.kordbook.data.DbChords
-import de.libf.kordbook.data.model.LocalChordOrigin
-import de.libf.kordbook.data.repository.ChordsRepository
-import de.libf.kordbook.data.sources.local.SqlDataStore
-import de.libf.kordbook.data.sources.remote.UltimateGuitarApiFetcher
+import de.libf.kordbook.data.DbSong
+import de.libf.kordbook.data.extensions.ChordFormatAdapter
+import de.libf.kordbook.data.extensions.InstrumentTypeAdapter
+import de.libf.kordbook.data.extensions.ListOfStringsAdapter
+import de.libf.kordbook.data.repository.SongsRepository
+import de.libf.kordbook.data.sources.AbstractSource
+import de.libf.kordbook.data.sources.remote.UltimateGuitarSource
+import de.libf.kordbook.data.stores.LocalStoreInterface
+import de.libf.kordbook.data.stores.SqldelightStore
 import de.libf.kordbook.res.MR
 import de.libf.kordbook.ui.components.ChordsFontFamily
 import de.libf.kordbook.ui.screens.ChordListScreen
@@ -30,18 +34,24 @@ import org.koin.dsl.module
 
 val commonModule = module {
     singleOf(::ChordListViewModel)
-    single<LocalChordOrigin> { SqlDataStore() }
-    singleOf(::ChordsRepository)
-    singleOf(::UltimateGuitarApiFetcher)
+    single<UltimateGuitarSource> { UltimateGuitarSource() }
+    single<SqldelightStore> { SqldelightStore(get<UltimateGuitarSource>()) }
+
+    single<LocalStoreInterface> { get<SqldelightStore>() }
+    single<AbstractSource> { get<SqldelightStore>() }
+
+    singleOf(::SongsRepository)
+    //singleOf(::UltimateGuitarApiFetcher)
     singleOf(::ChordDisplayViewModel)
 
     single {
         ChordsDatabase(
             driver = get(),
-            DbChordsAdapter = DbChords.Adapter(
-                relatedAdapter = SqlDataStore.ListOfStringsAdapter,
-                versionsAdapter = SqlDataStore.ListOfStringsAdapter,
-                formatAdapter = SqlDataStore.ChordFormatAdapter
+            DbSongAdapter = DbSong.Adapter(
+                relatedAdapter = ListOfStringsAdapter,
+                versionsAdapter = ListOfStringsAdapter,
+                formatAdapter = ChordFormatAdapter,
+                instrumentAdapter = InstrumentTypeAdapter
             )
         )
     }

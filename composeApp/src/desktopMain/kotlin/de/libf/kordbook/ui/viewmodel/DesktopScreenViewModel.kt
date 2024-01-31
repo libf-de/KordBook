@@ -1,8 +1,8 @@
 package de.libf.kordbook.ui.viewmodel
 
-import de.libf.kordbook.data.model.Chords
 import de.libf.kordbook.data.model.SearchResult
-import de.libf.kordbook.data.repository.ChordsRepository
+import de.libf.kordbook.data.model.Song
+import de.libf.kordbook.data.repository.SongsRepository
 import kotlinx.coroutines.launch
 import moe.tlaster.precompose.viewmodel.ViewModel
 import moe.tlaster.precompose.viewmodel.viewModelScope
@@ -10,13 +10,13 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 class DesktopScreenViewModel : ViewModel(), KoinComponent {
-    private val repo: ChordsRepository by inject()
+    private val repo: SongsRepository by inject()
 
-    val chordList = repo.chordList
+    val chordList = repo.songList
     val searchSuggestions = repo.searchSuggestions
     val listLoading = repo.listLoading
 
-    val chordsToDisplay = repo.chordsToDisplay
+    val chordsToDisplay = repo.songToDisplay
     val displayedChordsSaved = repo.currentChordsSaved
 
     init {
@@ -47,15 +47,9 @@ class DesktopScreenViewModel : ViewModel(), KoinComponent {
         }
     }
 
-    fun saveChords(chords: Chords) {
+    fun toggleSongFavorite(song: Song) {
         viewModelScope.launch {
-            repo.saveChords(chords)
-        }
-    }
-
-    fun deleteChords(chords: Chords) {
-        viewModelScope.launch {
-            repo.deleteChords(chords)
+            repo.toggleSongFavorite(song)
         }
     }
 
