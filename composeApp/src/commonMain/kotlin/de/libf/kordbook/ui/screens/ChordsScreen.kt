@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -41,8 +42,8 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.libf.kordbook.data.model.Chords
 import de.libf.kordbook.data.model.SearchResult
+import de.libf.kordbook.data.model.Song
 import de.libf.kordbook.data.model.toSearchResults
 import de.libf.kordbook.res.MR
 import de.libf.kordbook.ui.components.AutoScrollControl
@@ -69,8 +70,8 @@ fun ChordsScreen(
     navigator: Navigator
 ) {
     val viewModel: ChordDisplayViewModel = koinInject()
-    val chords by viewModel.chordsToDisplay.collectAsStateWithLifecycle()
-    val chordsSaved by viewModel.displayedChordsSaved.collectAsStateWithLifecycle(false)
+    val song by viewModel.chordsToDisplay.collectAsStateWithLifecycle()
+    val songSaved by viewModel.displayedChordsSaved.collectAsStateWithLifecycle(false)
 
     val toolboxExpanded = remember { mutableStateOf(false) }
 
@@ -79,7 +80,7 @@ fun ChordsScreen(
     val transposing = remember { mutableStateOf(0) }
     val fontSizeSp = remember { mutableStateOf(16) }
     var maxCharsPerLine by remember { mutableStateOf(9999) }
-    var wrappedChords by remember { mutableStateOf(Chords.EMPTY) }
+    var wrappedChords by remember { mutableStateOf(Song.EMPTY) }
 
     var isLandscape by remember { mutableStateOf(false) }
 
@@ -102,9 +103,9 @@ fun ChordsScreen(
         viewModel.fetchChords(url, findBest)
     }
 
-    LaunchedEffect(maxCharsPerLine, chords) {
-        wrappedChords = chords.copy(
-            chords = chords.chords?.ensureLineLength(maxCharsPerLine)
+    LaunchedEffect(maxCharsPerLine, song) {
+        wrappedChords = song.copy(
+            content = song.content?.ensureLineLength(maxCharsPerLine)
         )
     }
 
@@ -120,7 +121,7 @@ fun ChordsScreen(
             }
         )
 
-        chords.Viewer(
+        song.Viewer(
             lazyListState = lazyListState,
             transposeBy = transposing.value,
             fontSize = fontSizeSp.value,
@@ -240,7 +241,7 @@ fun ChordsScreen(
                 onSaveChordsClicked = {
 
                 },
-                chordsSaved = chordsSaved,
+                chordsSaved = songSaved,
                 fontSizeSp = fontSizeSp,
                 transposing = transposing,
                 autoScrollSpeed = autoScrollSpeed,
@@ -253,19 +254,15 @@ fun ChordsScreen(
                     navigator.goBack()
                 },
                 onSaveChordsClicked = {
-                    if (chordsSaved) {
-                        viewModel.deleteChords(chords)
-                    } else {
-                        viewModel.saveChords(chords)
-                    }
+                    viewModel.toggleSongFavorite(song)
                 },
-                chordsSaved = chordsSaved,
+                chordsSaved = songSaved,
                 toolboxExpanded = toolboxExpanded,
                 fontSizeSp = fontSizeSp,
                 transposing = transposing,
                 autoScrollSpeed = autoScrollSpeed,
                 autoScrollEnabled = autoScrollEnabled,
-                chords = chords,
+                song = song,
                 fontFamily = chordFontFamily,
                 onChordSelected = { searchResult, findBest ->
                     toolboxExpanded.value = false
@@ -288,7 +285,7 @@ fun BottomControlPane(
     autoScrollSpeed: MutableState<Float>,
     autoScrollEnabled: MutableState<Boolean>,
     chordsSaved: Boolean,
-    chords: Chords,
+    song: Song,
     fontFamily: ChordsFontFamily,
     onChordSelected: (SearchResult, Boolean) -> Unit = { _, _ -> },
     onSaveChordsClicked: () -> Unit = {},
@@ -358,7 +355,7 @@ fun BottomControlPane(
                 modifier = Modifier.fillMaxWidth().padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val versionsList = (chords.versions + chords)
+                val versionsList = (song.versions + song)
                     .toSearchResults()
                     .sortedBy { it.version?.toDoubleOrNull() }
 
@@ -369,14 +366,14 @@ fun BottomControlPane(
                 items(versionsList) { alternativeChord ->
                     Row(
                         modifier = Modifier.clickable {
-                            if (alternativeChord.version == chords.version) return@clickable
+                            if (alternativeChord.version == song.version) return@clickable
                             onChordSelected(alternativeChord, false)
                         }
                     ) {
                         Spacer(Modifier.weight(2f))
                         VersionItem(
                             searchResult = alternativeChord,
-                            selected = alternativeChord.version == chords.version,
+                            selected = alternativeChord.version == song.version,
                             fontFamily = fontFamily,
                             modifier = Modifier,
                             maxVotesPad = maxVotesPad,

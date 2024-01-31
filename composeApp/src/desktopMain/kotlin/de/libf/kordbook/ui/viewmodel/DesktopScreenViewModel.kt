@@ -12,7 +12,7 @@ import org.koin.core.component.inject
 class DesktopScreenViewModel : ViewModel(), KoinComponent {
     private val repo: SongsRepository by inject()
 
-    val chordList = repo.songList
+    val chordList = repo.chordList
     val searchSuggestions = repo.searchSuggestions
     val listLoading = repo.listLoading
 

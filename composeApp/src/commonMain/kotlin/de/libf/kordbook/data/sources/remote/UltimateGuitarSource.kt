@@ -14,8 +14,11 @@ import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.encodeURLParameter
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.datetime.Clock
@@ -28,62 +31,95 @@ import org.koin.core.component.inject
 
 class UltimateGuitarSource : AbstractSource(), KoinComponent {
 
-    /** Ktor-Client / API-"Authentication" related **/
-    private val md5Tool by inject<Md5>()
-
-    private val clientID = (1..16).map {
-        (('a'..'f') + ('0'..'9')).random()
-    }.joinToString("")
-
-    /**
-     * Generates the API key.
-     *
-     * The API key is a combination of the client ID and the current date.
-     *
-     * @return The generated API key.
-     */
-    private fun apiKey(): String {
-        val currentDate = Clock.System.now().toLocalDateTime(TimeZone.UTC)
-        return "${clientID}${currentDate.year}-" +
-                "${currentDate.monthNumber.toTwoDigitString()}-" +
-                "${currentDate.dayOfMonth.toTwoDigitString()}:" +
-                "${currentDate.hour}createLog()"
-    }
-
     /**
      * The HTTP client used to make requests to the Ultimate Guitar API.
      *
      * The client includes several plugins for user agent, retrying requests, and content negotiation.
      */
-    private val client = HttpClient {
-        defaultRequest {
-            header("X-UG-CLIENT-ID", clientID)
-            header("X-UG-API-KEY", md5Tool.fromString(apiKey()))
+    private class UGHttpClient : KoinComponent {
+        private var client: HttpClient? = null
+        private var failedRequests = 0
+
+        /** Ktor-Client / API-"Authentication" related **/
+        private val md5Tool by inject<Md5>()
+
+        /** Client ID for the Ultimate Guitar API. **/
+        var clientID: String = ""
+            private set
+
+        /**
+         * Generates the API key.
+         *
+         * The API key is a combination of the client ID and the current date.
+         *
+         * @return The generated API key.
+         */
+        private fun apiKey(): String {
+            val currentDate = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+            return "${clientID}${currentDate.year}-" +
+                    "${currentDate.monthNumber.toTwoDigitString()}-" +
+                    "${currentDate.dayOfMonth.toTwoDigitString()}:" +
+                    "${currentDate.hour}createLog()"
         }
 
-        install(UserAgent) {
-            agent = "UG_ANDROID/7.0.7 (Pixel; Android 11)"
+        constructor() {
+            newClient()
         }
 
-        install(HttpRequestRetry) {
-            retryOnException(
-                maxRetries = 3,
-                retryOnTimeout = true
-            )
+        suspend fun get(urlString: String, block: HttpRequestBuilder.() -> Unit = {}): HttpResponse {
+            if(client == null) newClient()
+            val response = client!!.get(urlString, block)
 
-            retryOnServerErrors(
-                maxRetries = 3
-            )
+            if(failedRequests < 4 && response.status.value !in 200..299 && response.status.value != 404) {
+                Napier.d { "Got invalid status code, trying to generate a new client..." }
+                failedRequests++
+                newClient()
+                return get(urlString, block)
+            } else if(response.status == HttpStatusCode.OK) {
+                failedRequests = 0
+            }
+
+            return response
         }
 
-        install(ContentNegotiation) {
-            json(Json {
-                prettyPrint = true
-                isLenient = true
-                ignoreUnknownKeys = true
-            })
+        fun newClient() {
+            clientID = (1..16).map {
+                (('a'..'f') + ('0'..'9')).random()
+            }.joinToString("")
+
+            client = HttpClient {
+                defaultRequest {
+                    header("X-UG-CLIENT-ID", clientID)
+                    header("X-UG-API-KEY", md5Tool.fromString(apiKey()))
+                }
+
+                install(UserAgent) {
+                    agent = "UG_ANDROID/7.0.7 (Pixel; Android 11)"
+                }
+
+                install(HttpRequestRetry) {
+                    retryOnException(
+                        maxRetries = 3,
+                        retryOnTimeout = true
+                    )
+
+                    retryOnServerErrors(
+                        maxRetries = 3
+                    )
+                }
+
+                install(ContentNegotiation) {
+                    json(Json {
+                        prettyPrint = true
+                        isLenient = true
+                        ignoreUnknownKeys = true
+                    })
+                }
+            }
         }
     }
+
+    private val clientMgr = UGHttpClient()
 
     /** JSON data classes **/
     @Serializable
@@ -188,9 +224,11 @@ class UltimateGuitarSource : AbstractSource(), KoinComponent {
         }
     }
 
+    override val NAME: String = "Ultimate Guitar"
+
     override suspend fun searchImpl(query: String, page: Int): List<SearchResult> {
         val start = Clock.System.now().toEpochMilliseconds()
-        val response = client.get(
+        val response = clientMgr.get(
             "https://api.ultimate-guitar.com/api/v1/tab/search" +
                     "?title=${query.encodeURLParameter()}" +
                     "&display_songs=1" +
@@ -198,7 +236,7 @@ class UltimateGuitarSource : AbstractSource(), KoinComponent {
                     "&type[]=300" +
                     "&page=${page}")
 
-        Napier.d("client id = ${clientID}, api key = ${apiKey()}")
+        Napier.d("client id = ${clientMgr.clientID}")
 
         Napier.d("got response from UG in ${Clock.System.now().toEpochMilliseconds() - start}ms")
 
@@ -232,11 +270,15 @@ class UltimateGuitarSource : AbstractSource(), KoinComponent {
     override suspend fun fetchSongByUrlImpl(url: String): Song? {
         if(!url.startsWith("UG::")) return null
         val id = url.removePrefix("UG::")
-        val response = client.get("https://api.ultimate-guitar.com/api/v1/tab/info?tab_id=${id}&tab_access_type=private")
+        val response = clientMgr.get("https://api.ultimate-guitar.com/api/v1/tab/info?tab_id=${id}&tab_access_type=private")
         if (response.status.value !in 200..299) {
             Napier.e { "Unexpected code: $response" }
             throw Exception("Unexpected code: $response")
         }
+
+        val name =  response.body<UGTabData>().song_name
+
+        Napier.d { "UGSource returns $name" }
 
         return response.body<UGTabData>().toSong()
     }
@@ -248,7 +290,10 @@ class UltimateGuitarSource : AbstractSource(), KoinComponent {
      * @return A list of suggestions as SearchResult.
      */
     private suspend fun getSuggestions(query: String): List<SearchResult> {
-        val searchSuggestions = client.get("https://api.ultimate-guitar.com/api/v1/tab/suggestion?q=${query.encodeURLParameter()}")
+        val searchSuggestions = clientMgr.get("https://api.ultimate-guitar.com/api/v1/tab/suggestion?q=${query.encodeURLParameter()}")
+
+
+
         if (searchSuggestions.status.value !in 200..299) {
             if(searchSuggestions.status.value == 404) return emptyList()
 

@@ -30,7 +30,7 @@ selectAllSongs:
 SELECT * FROM DbSong WHERE favorite = 1;
 
 selectSongByUrl:
-SELECT * FROM DbSong WHERE url = ?;
+SELECT * FROM DbSong WHERE url = ? AND content IS NOT NULL;
 
 setFavorite:
 UPDATE DbSong SET favorite = ? WHERE url = ?;
@@ -49,6 +49,10 @@ SELECT songName, songId, artist, artistId, url, rating, votes, version, instrume
 
 insertSong:
 INSERT OR IGNORE INTO DbSong (url, songName, songId, artist, artistId, versions, related, rating, votes, version, tonality, capo, content, instrument, format)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+replaceSong:
+REPLACE INTO DbSong (url, songName, songId, artist, artistId, versions, related, rating, votes, version, tonality, capo, content, instrument, format)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateSong:

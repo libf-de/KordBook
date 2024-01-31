@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
@@ -49,7 +50,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.libf.kordbook.data.model.Chords
+import de.libf.kordbook.data.model.Song
 import de.libf.kordbook.data.model.SearchResult
 import de.libf.kordbook.data.model.toSearchResults
 import de.libf.kordbook.data.tools.KeyEventDispatcher
@@ -98,8 +99,8 @@ fun DesktopChordScreen(
     val searchSuggestions by viewModel.searchSuggestions.collectAsStateWithLifecycle()
     val listLoading by viewModel.listLoading.collectAsStateWithLifecycle()
 
-    val chords by viewModel.chordsToDisplay.collectAsStateWithLifecycle()
-    val chordsSaved by viewModel.displayedChordsSaved.collectAsStateWithLifecycle(false)
+    val song by viewModel.chordsToDisplay.collectAsStateWithLifecycle()
+    val songSaved by viewModel.displayedChordsSaved.collectAsStateWithLifecycle(false)
 
     val autoScrollEnabled = remember { mutableStateOf(true) }
     val autoScrollSpeed = remember { mutableStateOf(0f) }
@@ -159,11 +160,11 @@ fun DesktopChordScreen(
         return true
     }
 
-    LaunchedEffect(chordsSaved) {
-        println("Chords saved changed to $chordsSaved")
+    LaunchedEffect(songSaved) {
+        println("Chords saved changed to $songSaved")
     }
 
-    LaunchedEffect(chords) {
+    LaunchedEffect(song) {
         autoScrollSpeed.value = 0f
         transposing.value = 0
         lazyListState.scrollToItem(0)
@@ -220,7 +221,7 @@ fun DesktopChordScreen(
 
         Box {
             ChordView(
-                chords = chords,
+                song = song,
                 lazyListState = lazyListState,
                 transposeBy = transposing.value,
                 fontSize = fontSizeSp.value,
@@ -231,7 +232,7 @@ fun DesktopChordScreen(
             )
 
             ChordViewSidebar(
-                chords = chords,
+                song = song,
                 fontSize = fontSizeSp,
                 scrollEnabled = autoScrollEnabled,
                 scrollSpeed = autoScrollSpeed,
@@ -239,17 +240,13 @@ fun DesktopChordScreen(
                 modifier = Modifier.width(sidebarWidth).fillMaxHeight().align(Alignment.TopEnd),
                 onChordSelected = viewModel::onSearchResultSelected,
                 onSaveChordsClicked = {
-                    /*if (chordsSaved) {
-                        viewModel.deleteChords(chords)
-                    } else {*/
-                        viewModel.saveChords(chords)
-                    //}
+                    viewModel.toggleSongFavorite(song)
                 },
                 onDeleteChordsClicked = {
-                    viewModel.deleteChords(chords)
+                    viewModel.toggleSongFavorite(song)
                 },
                 fontFamily = chordFontFamily,
-                currentChordsSaved = chordsSaved
+                currentChordsSaved = songSaved
             )
         }
     }
@@ -268,7 +265,7 @@ private fun Boolean.toInt(): Int {
 
 @Composable
 fun ChordView(
-    chords: Chords,
+    song: Song,
     lazyListState: LazyListState,
     fontFamily: ChordsFontFamily = ChordsFontFamily.default,
     transposeBy: Int = 0,
@@ -276,7 +273,7 @@ fun ChordView(
     modifier: Modifier = Modifier,
 ) {
     Row(modifier = modifier) {
-        chords.Viewer(
+        song.Viewer(
             lazyListState = lazyListState,
             transposeBy = transposeBy,
             fontSize = fontSize,
@@ -288,7 +285,7 @@ fun ChordView(
 
 @Composable
 fun ChordViewSidebar(
-    chords: Chords,
+    song: Song,
     fontSize: MutableState<Int>,
     scrollSpeed: MutableState<Float>,
     scrollEnabled: MutableState<Boolean>,
@@ -330,7 +327,7 @@ fun ChordViewSidebar(
                     modifier = Modifier.fillMaxWidth().padding(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val versionsList = (chords.versions + chords)
+                    val versionsList = (song.versions + song)
                         .toSearchResults()
                         .sortedBy { it.version?.toDoubleOrNull() }
 
@@ -342,12 +339,12 @@ fun ChordViewSidebar(
 
                         VersionItem(
                             searchResult = alternativeChord,
-                            selected = alternativeChord.version == chords.version,
+                            selected = alternativeChord.version == song.version,
                             fontFamily = fontFamily,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    if (alternativeChord.version == chords.version) return@clickable
+                                    if (alternativeChord.version == song.version) return@clickable
                                     onChordSelected(alternativeChord, false)
                                 },
                             maxVotesPad = maxVotesPad
@@ -375,7 +372,7 @@ fun ChordViewSidebar(
                     }
 
                     if(recommendedExpanded) {
-                        items(chords.related.toSearchResults()) {
+                        items(song.related.toSearchResults()) {
                             RelatedItem(
                                 result = it,
                                 modifier = Modifier.clickable {

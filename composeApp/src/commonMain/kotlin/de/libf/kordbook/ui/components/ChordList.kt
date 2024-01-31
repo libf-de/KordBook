@@ -142,7 +142,7 @@ fun ChordList(
                 /** Chord origin header **/
                 item {
                     Column {
-                        Text("von ${it.key.NAME}")
+                        Text("von ${it.key}")
                         Divider()
                     }
                 }

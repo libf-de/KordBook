@@ -1,10 +1,12 @@
 package de.libf.kordbook.data.repository
 
+import androidx.compose.runtime.collectAsState
 import de.libf.kordbook.data.model.SearchResult
 import de.libf.kordbook.data.model.Song
 import de.libf.kordbook.data.sources.AbstractSource
 import de.libf.kordbook.data.stores.LocalStoreInterface
 import de.libf.kordbook.data.tools.levenshtein
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -14,6 +16,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.launch
@@ -29,12 +32,13 @@ class SongsRepository : KoinComponent {
     //private val allSources = listOf(localSrc, ugSrc)
 
     val songToDisplay = MutableStateFlow(Song.EMPTY)
-    val songList = MutableSharedFlow<List<SearchResult>>()
+    //val songList = MutableSharedFlow<List<SearchResult>>()
+    val chordList = MutableStateFlow<Map<String, List<SearchResult>>>(emptyMap())
     @OptIn(ExperimentalCoroutinesApi::class)
     val currentChordsSaved: Flow<Boolean> = songToDisplay.flatMapMerge {
         localSrc.isSongFavorite(it)
     }
-    val searchSuggestions = MutableSharedFlow<List<SearchResult>>()
+    val searchSuggestions = MutableStateFlow(emptyList<SearchResult>())
     val listLoading = MutableStateFlow(false)
 
     private var suggestionJobs: MutableList<Job> = mutableListOf()
@@ -48,33 +52,53 @@ class SongsRepository : KoinComponent {
     }
 
     fun getSearchSuggestions(query: String) {
-        suggestionJobs.forEach { it.cancel() }
-        sources.getSearchSuggestionsFlow(query, suggestionJobs, searchSuggestions)
+        var suggestions = emptyList<SearchResult>()
+        val suggestionMutex = Mutex()
+
+        sources.getSearchSuggestions(query) { (sourceName, sourceSuggestions) ->
+            suggestionMutex.lock()
+            suggestions = suggestions + sourceSuggestions
+            searchSuggestions.emit(suggestions)
+            suggestionMutex.unlock()
+        }
     }
 
-    suspend fun searchChordsList(query: String) {
-        if(query.isBlank()) {
+    fun searchChordsList(query: String) {
+        /*if(query.isBlank()) {
             showLocalChordsList()
             return
-        }
+        }*/
 
-        sources.searchToFlow(query, 1, songList)
+        var resultMap = emptyMap<String, List<SearchResult>>()
+        val mapMutex = Mutex()
+
+        sources.search(query, 1) {
+            mapMutex.lock()
+            resultMap = resultMap + it
+            chordList.emit(resultMap)
+            mapMutex.unlock()
+        }
     }
 
     suspend fun showLocalChordsList() {
-        localSrc.getAllSongsFlow().collect {
-            songList.emit(it)
-        }
+        /*localSrc.getAllSongsFlow().collect {
+            chordList.emit(mapOf("Favoriten" to it))
+        }*/
     }
 
     suspend fun fetchChordsFromUrl(url: String) {
-        localSrc.getSongByUrl(url).collect {
+        localSrc.getAndCacheSong(url)?.let { songToDisplay.emit(it) }
+        /*localSrc.getSongByUrl(url).collectLatest {
             songToDisplay.emit(it)
-        }
+            Napier.d { "Emitting song ${it.songName} for url ${url}" }
+        }*/
+        /*localSrc.getSongByUrl(url).collect {
+
+        }*/
     }
 
     suspend fun fetchBestVersionFromUrl(url: String) {
-        val firstVersion = localSrc.getSongByUrl(url).first()
+        val firstVersion = localSrc.getAndCacheSong(url) ?: return
         if(firstVersion.versions.size > 1) {
             println(firstVersion.versions.sortedBy { it.ratingVotesRatio() }.reversed().map {
                 "${it.version} -> ${it.rating} / ${it.votes} / ${it.ratingVotesRatio()}"

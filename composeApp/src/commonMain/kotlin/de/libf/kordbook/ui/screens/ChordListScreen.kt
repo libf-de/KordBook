@@ -72,14 +72,13 @@ fun ChordListScreen(
 ) {
     val viewModel: ChordListViewModel = koinInject()
 
-    val chordList = viewModel._chordList
-    //val chordList by viewModel.chordList.collectAsStateWithLifecycle()
+    val chordList by viewModel.chordList.collectAsStateWithLifecycle()
     val searchSuggestions by viewModel.searchSuggestions.collectAsStateWithLifecycle()
     val listLoading by viewModel.listLoading.collectAsStateWithLifecycle()
 
     ChordList(
         modifier = Modifier.fillMaxSize(),
-        chordList = chordList.map { "bla!" to it }.toMap(),
+        chordList = chordList,
         fontFamily = chordFontFamily,
         onChordSelected = { selected: SearchResult, findBest: Boolean ->
             navigator.navigate("/chords/${findBest}/${selected.url.encodeBase64()}")

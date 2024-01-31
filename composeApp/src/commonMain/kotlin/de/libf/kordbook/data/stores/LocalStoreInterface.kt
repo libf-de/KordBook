@@ -5,7 +5,9 @@ import de.libf.kordbook.data.model.Song
 import kotlinx.coroutines.flow.Flow
 
 interface LocalStoreInterface {
-    suspend fun getSongByUrl(url: String): Flow<Song>
+    /*suspend fun getSongByUrl(url: String): Flow<Song>*/
+
+    suspend fun getAndCacheSong(url: String): Song?
 
     fun searchSongsFlow(query: String): Flow<List<SearchResult>>
 

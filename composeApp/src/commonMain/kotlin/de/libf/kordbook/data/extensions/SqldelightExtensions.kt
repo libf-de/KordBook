@@ -3,6 +3,7 @@ package de.libf.kordbook.data.extensions
 import app.cash.sqldelight.ColumnAdapter
 import de.libf.kordbook.data.ChordsDatabase
 import de.libf.kordbook.data.DbSong
+import de.libf.kordbook.data.SelectSongByUrl
 import de.libf.kordbook.data.model.InstrumentType
 import de.libf.kordbook.data.model.SearchResult
 import de.libf.kordbook.data.model.Song
@@ -50,6 +51,70 @@ fun DbSong.toSearchResult(): SearchResult {
         votes = this.votes,
         url = this.url,
         favorite = this.favorite
+    )
+}
+
+fun SelectSongByUrl.toSong(database: ChordsDatabase): Song {
+    val versions = this.versions.mapNotNull {
+        val relatedChord = database.songsQueries.selectVersionsByUrl(it).executeAsOneOrNull()
+        if (relatedChord != null) {
+            Song(
+                songName = relatedChord.songName,
+                songId = relatedChord.songId,
+                artist = relatedChord.artist,
+                artistId = relatedChord.artistId,
+                versions = realmListOf(),
+                related = realmListOf(),
+                rating = relatedChord.rating,
+                votes = relatedChord.votes,
+                version = relatedChord.version,
+                url = relatedChord.url,
+                format = SongFormat.NULL,
+                instrument = relatedChord.instrument
+            )
+        } else {
+            null
+        }
+    }
+
+    val related = this.related.mapNotNull {
+        val relatedChord = database.songsQueries.selectVersionsByUrl(it).executeAsOneOrNull()
+        if (relatedChord != null) {
+            Song(
+                songName = relatedChord.songName,
+                songId = relatedChord.songId,
+                artist = relatedChord.artist,
+                artistId = relatedChord.artistId,
+                versions = realmListOf(),
+                related = realmListOf(),
+                rating = relatedChord.rating,
+                votes = relatedChord.votes,
+                version = relatedChord.version,
+                url = relatedChord.url,
+                format = SongFormat.NULL,
+                instrument = relatedChord.instrument
+            )
+        } else {
+            null
+        }
+    }
+
+    return Song(
+        songName = this.songName,
+        songId = this.songId,
+        artist = this.artist,
+        artistId = this.artistId,
+        versions = versions,
+        related = related,
+        url = this.url,
+        rating = this.rating,
+        votes = this.votes,
+        version = this.version,
+        tonality = this.tonality,
+        capo = this.capo,
+        content = this.content,
+        format = this.format,
+        instrument = this.instrument
     )
 }
 

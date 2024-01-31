@@ -18,9 +18,7 @@ import org.koin.core.component.inject
 class ChordListViewModel : ViewModel(), KoinComponent {
     private val repo: SongsRepository by inject()
 
-    val chordList: MutableStateFlow<List<SearchResult>> = MutableStateFlow(emptyList())
-    val _chordList: MutableList<SearchResult> = mutableListOf()
-    //val chordList = repo.songList
+    val chordList = repo.chordList
     val searchSuggestions = repo.searchSuggestions
     val listLoading = repo.listLoading
 
@@ -28,14 +26,6 @@ class ChordListViewModel : ViewModel(), KoinComponent {
         viewModelScope.launch {
             repo.showLocalChordsList()
         }
-
-        viewModelScope.launch {
-            repo.songList.flatMapConcat {
-                it.asFlow()
-            }.toList(_chordList)
-        }
-
-
     }
 
     fun onSearchResultSelected(searchResult: SearchResult, findBestVersion: Boolean) {

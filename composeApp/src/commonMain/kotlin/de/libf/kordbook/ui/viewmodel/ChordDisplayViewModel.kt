@@ -3,6 +3,7 @@ package de.libf.kordbook.ui.viewmodel
 import de.libf.kordbook.data.model.SearchResult
 import de.libf.kordbook.data.model.Song
 import de.libf.kordbook.data.repository.SongsRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import moe.tlaster.precompose.viewmodel.ViewModel
 import moe.tlaster.precompose.viewmodel.viewModelScope
@@ -15,8 +16,12 @@ class ChordDisplayViewModel : ViewModel(), KoinComponent {
     val chordsToDisplay = repo.songToDisplay
     val displayedChordsSaved = repo.currentChordsSaved
 
+    var fetchJob: Job? = null
+
     fun onSearchResultSelected(searchResult: SearchResult, findBestVersion: Boolean) {
-        viewModelScope.launch {
+        if(fetchJob?.isActive == true) { fetchJob?.cancel() }
+
+        fetchJob = viewModelScope.launch {
             if(findBestVersion) {
                 repo.fetchBestVersionFromUrl(searchResult.url)
             } else {
@@ -26,7 +31,9 @@ class ChordDisplayViewModel : ViewModel(), KoinComponent {
     }
 
     fun fetchChords(url: String, findBest: Boolean) {
-        viewModelScope.launch {
+        if(fetchJob?.isActive == true) { fetchJob?.cancel() }
+
+        fetchJob = viewModelScope.launch {
             if(findBest) {
                 repo.fetchBestVersionFromUrl(url)
             } else {
