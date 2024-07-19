@@ -40,12 +40,14 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -69,6 +71,7 @@ import de.libf.kordbook.ui.components.VersionItem
 import de.libf.kordbook.ui.viewmodel.DesktopScreenViewModel
 import dev.icerock.moko.resources.compose.fontFamilyResource
 import dev.icerock.moko.resources.compose.painterResource
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -105,6 +108,9 @@ fun DesktopChordScreen(
     val chords by viewModel.chordsToDisplay.collectAsStateWithLifecycle()
     val chordsSaved by viewModel.displayedChordsSaved.collectAsStateWithLifecycle(false)
 
+    val sidebarExpanded = remember { mutableStateOf(true) }
+
+
     val autoScrollEnabled = remember { mutableStateOf(true) }
     val autoScrollSpeed = remember { mutableStateOf(0f) }
     var fastScrollState by remember { mutableStateOf(0) }
@@ -122,6 +128,8 @@ fun DesktopChordScreen(
             it.key != Key.S && it.key != Key.DirectionDown &&
             it.key != Key.W && it.key != Key.DirectionUp) return true
 
+        Napier.d(it.toString());
+
         when(it.key) {
             Key.Spacebar -> {
                 if(autoScrollSpeed.value != 0f) {
@@ -132,10 +140,16 @@ fun DesktopChordScreen(
                 }
             }
 
+            Key.Backslash -> {
+                sidebarExpanded.value = !sidebarExpanded.value
+            }
+
+            Key.RightBracket,
             Key.Plus -> {
                 autoScrollSpeed.value += 0.1f
             }
 
+            Key.Slash,
             Key.Minus -> {
                 autoScrollSpeed.value -= 0.1f
             }
@@ -253,7 +267,8 @@ fun DesktopChordScreen(
                     viewModel.deleteChords(chords)
                 },
                 fontFamily = chordFontFamily,
-                currentChordsSaved = chordsSaved
+                currentChordsSaved = chordsSaved,
+                expanded = sidebarExpanded
             )
         }
     }
@@ -297,6 +312,7 @@ fun ChordViewSidebar(
     scrollSpeed: MutableState<Float>,
     scrollEnabled: MutableState<Boolean>,
     transposing: MutableState<Int>,
+    expanded: MutableState<Boolean>,
     modifier: Modifier,
     currentChordsSaved: Boolean?,
     onChordSelected: (SearchResult, Boolean) -> Unit = { _, _ -> },
@@ -305,18 +321,42 @@ fun ChordViewSidebar(
     fontFamily: ChordsFontFamily = ChordsFontFamily.default,
 ) {
     var recommendedExpanded by remember { mutableStateOf(false) }
+    //var barExpanded by remember { mutableStateOf(true) }
     //var versionsExpanded by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier.fillMaxWidth().fillMaxHeight()) {
+    Column(
+        modifier = modifier.fillMaxWidth().fillMaxHeight(),
+        horizontalAlignment = Alignment.End
+    ) {
         ElevatedCard(
             modifier = Modifier
                 .animateContentSize()
+                .alpha(if(expanded.value) 1.0f else 0.2f)
                 .padding(8.dp)
-                .fillMaxWidth()
+                .fillMaxWidth(if(expanded.value) 1.0f else 0.2f)
         ) {
             Column(
                 modifier = Modifier.padding(top = 8.dp, bottom = 8.dp, start = 16.dp, end = 16.dp),
             ) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Crossfade(expanded.value) {
+                        Icon(
+                            if(it) painterResource(MR.images.collapse) else painterResource(MR.images.expand),
+                            contentDescription = "Expand/collapse recommendations",
+                            modifier = Modifier
+                                .clickable {
+                                    expanded.value = !expanded.value
+                                }.size(16.dp)
+                        )
+                    }
+                }
+
+                if(!expanded.value) return@Column;
+
+
                 SidebarControls(
                     fontSize = fontSize,
                     scrollSpeed = scrollSpeed,

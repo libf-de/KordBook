@@ -21,9 +21,9 @@ kotlin {
             }
         }
     }
-    
+
     jvm("desktop")
-    
+
     listOf(
         iosX64(),
         iosArm64(),
@@ -42,7 +42,7 @@ kotlin {
             //extraSpecAttributes["resources"] = "['src/commonMain/resources/**']"
         }
     }
-    
+
     sourceSets {
         //val desktopMain by getting
 
@@ -82,6 +82,8 @@ kotlin {
             implementation(compose.material3)
             @OptIn(ExperimentalComposeLibrary::class)
             implementation(compose.components.resources)
+
+            implementation(libs.appdirs)
 
 
             implementation(libs.realm.base)
@@ -169,9 +171,21 @@ compose.desktop {
         mainClass = "MainKt"
 
         nativeDistributions {
+            modules("java.sql")
+
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "de.libf.kordbook"
-            packageVersion = "1.0.0"
+            packageName = "KordBook"
+            packageVersion = "1.2.0"
+
+            macOS {
+                iconFile.set(project.file("icons/macos.icns"))
+            }
+            windows {
+                iconFile.set(project.file("icons/windows.ico"))
+            }
+            linux {
+                iconFile.set(project.file("icons/linux.png"))
+            }
         }
     }
 }
